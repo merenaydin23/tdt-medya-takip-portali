@@ -18,6 +18,11 @@ ASPECT_SECURITY = ["şuşa beyannamesi", "savunma", "askeri", "tatbikat", "ordu"
 ASPECT_ENERGY = ["tanap", "tap", "petkim", "socar", "boru hattı", "enerji", "şahdeniz", "şah deniz", "btc", "doğalgaz", "petrol", "gaz", "ticaret", "yatırım", "ekonomi"]
 ASPECT_TURKIC = ["türk devletleri teşkilatı", "tdt", "türk konverse", "türk konseyi", "türksoy", "turkpa", "orta asya", "türk dünyası"]
 ASPECT_DIPLOMACY = ["diplomasi", "siyaset", "büyükelçi", "büyükelçilik", "başkonsolosluk", "konsolos", "ziyaret", "görüşme", "zirve", "dışişleri", "ceyhun bayramov", "reşad memmedov", "milli meclis"]
+ASPECT_SPORTS = [
+    "futbol", "futbolcu", "maç", "maçı", "maçlar", "maçları", "gol", "şampiyonlar ligi", "devler ligi", "avrupa ligi",
+    "konferans ligi", "karabağ fk", "sabah fk", "neftçi", "spor", "skoru", "maç özeti", "stadyum", "şampiyona", "puan durumu",
+    "maçın", "karşılaşma", "rakibi", "fikstür", "play-off", "kulübü", "transfer", "teknik direktör", "şampiyon", "şampiyonluk"
+]
 
 # Diğer Türk Devletleri
 ASPECT_KAZAKHSTAN = [
@@ -55,6 +60,7 @@ ASPECT_SECURITY_PATTERNS = [_compile_kw(k) for k in ASPECT_SECURITY]
 ASPECT_ENERGY_PATTERNS = [_compile_kw(k) for k in ASPECT_ENERGY]
 ASPECT_TURKIC_PATTERNS = [_compile_kw(k) for k in ASPECT_TURKIC]
 ASPECT_DIPLOMACY_PATTERNS = [_compile_kw(k) for k in ASPECT_DIPLOMACY]
+ASPECT_SPORTS_PATTERNS = [_compile_kw(k) for k in ASPECT_SPORTS]
 
 ASPECT_KAZAKHSTAN_PATTERNS = [_compile_kw(k) for k in ASPECT_KAZAKHSTAN]
 ASPECT_KYRGYZSTAN_PATTERNS = [_compile_kw(k) for k in ASPECT_KYRGYZSTAN]
@@ -141,10 +147,12 @@ def check_stage1_relevance(title: str, summary: str) -> dict:
             # Check other categories if no other specific countries matched
             if any(p.search(text_for_match) for p in ASPECT_ARMENIA_PATTERNS) or any(k in ("ermenistan-azerbaycan", "azerbaycan-ermenistan", "paşinyan", "karabağ", "dağlık karabağ", "zangezur", "zengezur") for k in matched_keywords):
                 aspect = "Ermenistan Hattı"
+            elif any(p.search(text_for_match) for p in ASPECT_SPORTS_PATTERNS):
+                aspect = "Spor"
             elif any(p.search(text_for_match) for p in ASPECT_SECURITY_PATTERNS):
-                aspect = "Güvenlik / Savunma"
+                aspect = "Güvenlik/Savunma"
             elif any(p.search(text_for_match) for p in ASPECT_ENERGY_PATTERNS):
-                aspect = "Enerji / Ekonomi"
+                aspect = "Enerji/Ekonomi"
             elif any(p.search(text_for_match) for p in ASPECT_TURKIC_PATTERNS):
                 aspect = "Türk Devletleri/Bölgesel"
             elif any(p.search(text_for_match) for p in ASPECT_DIPLOMACY_PATTERNS):

@@ -154,6 +154,78 @@ def run_media_monitoring_pipeline() -> dict:
 
             items_to_process.append(item)
 
+        # Parallel scraping of full article body texts for all items to process
+        if items_to_process:
+            from adapters.base_adapter import scrape_article_text
+            logger.info(f"Scraping full article content for {len(items_to_process)} new articles...")
+            
+            def _scrape_worker(item):
+                link = item.get("link")
+                if link:
+                    res = scrape_article_text(link)
+                    if res:
+                        if res.get("text"):
+                            item["summary"] = res["text"]
+                        if res.get("publish_date"):
+                            pub_dt = parse_publish_date(res["publish_date"])
+                            item["publish_date"] = pub_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+            with ThreadPoolExecutor(max_workers=16) as executor:
+                list(executor.map(_scrape_worker, items_to_process))
+
+            # Deduplicate by content text to ensure the same news is not listed twice
+            conn = get_connection()
+            cursor = conn.cursor()
+            cutoff_date_str = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
+            cursor.execute("SELECT summary, title FROM news WHERE publish_date >= ?", (cutoff_date_str,))
+            db_articles = cursor.fetchall()
+            conn.close()
+
+            def _clean_for_dedup(t: str) -> str:
+                if not t:
+                    return ""
+                cleaned = "".join(ch for ch in t.lower() if ch.isalnum())
+                return cleaned[:200]
+
+            existing_summaries_clean = {
+                _clean_for_dedup(row["summary"])
+                for row in db_articles
+                if row["summary"] and len(row["summary"]) > 50
+            }
+            existing_titles_clean = {
+                _clean_for_dedup(row["title"])
+                for row in db_articles
+                if row["title"]
+            }
+
+            deduped_items = []
+            seen_texts_in_run = set()
+
+            for item in items_to_process:
+                summary_text = item.get("summary") or ""
+                clean_text = _clean_for_dedup(summary_text)
+                clean_title = _clean_for_dedup(item.get("title") or "")
+                
+                # If text content is empty/short, fall back to title similarity
+                if not clean_text or len(summary_text) < 50:
+                    dup_key = f"title_{clean_title}"
+                    is_dup = clean_title in existing_titles_clean or dup_key in seen_texts_in_run
+                else:
+                    dup_key = f"text_{clean_text}"
+                    is_dup = clean_text in existing_summaries_clean or dup_key in seen_texts_in_run or clean_title in existing_titles_clean
+
+                if is_dup:
+                    logger.info(f"Skipping duplicate article by content/title: {item.get('title')}")
+                    continue
+
+                seen_texts_in_run.add(dup_key)
+                if clean_title:
+                    seen_texts_in_run.add(f"title_{clean_title}")
+                deduped_items.append(item)
+
+            logger.info(f"Deduplication by content complete. Reduced {len(items_to_process)} articles to {len(deduped_items)}.")
+            items_to_process = deduped_items
+
         # Stage 1 keyword matching
         stage2_candidates = []
         for item in items_to_process:

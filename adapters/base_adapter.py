@@ -232,3 +232,126 @@ class BaseAdapter:
     def fetch_latest_news(self) -> list:
         """Subclasses should implement this method."""
         raise NotImplementedError("Each adapter must implement fetch_latest_news()")
+
+
+def parse_date_string(date_str: str) -> datetime:
+    if not date_str:
+        return None
+    # Remove timezone suffix like +03:00 or Z
+    date_str = date_str.split(".")[0]  # remove milliseconds if any
+    date_str = re.sub(r'([+-]\d{2}):?(\d{2})$', '', date_str) # remove timezone offset
+    date_str = date_str.replace("Z", "").replace("T", " ").strip()
+    
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%dT%H:%M:%S",
+        "%d.%m.%Y %H:%M:%S",
+        "%d.%m.%Y %H:%M",
+        "%Y/%m/%d %H:%M:%S"
+    ):
+        try:
+            return datetime.strptime(date_str, fmt)
+        except:
+            pass
+    return None
+
+
+def extract_pub_date_from_html(soup: BeautifulSoup) -> str:
+    # 1. Check article:published_time and standard metas
+    meta_pub = (
+        soup.find("meta", property="article:published_time") or
+        soup.find("meta", attrs={"name": "article:published_time"}) or
+        soup.find("meta", property="og:published_time") or
+        soup.find("meta", attrs={"name": "publish-date"}) or
+        soup.find("meta", attrs={"name": "publication_date"}) or
+        soup.find("meta", attrs={"name": "release-date"}) or
+        soup.find("meta", property="og:release_date")
+    )
+    if meta_pub and meta_pub.get("content"):
+        date_str = meta_pub.get("content").strip()
+        parsed_dt = parse_date_string(date_str)
+        if parsed_dt:
+            return parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    # 2. Check application/ld+json for datePublished
+    import json
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string)
+            if isinstance(data, dict):
+                dt_str = data.get("datePublished") or data.get("dateCreated")
+                if not dt_str and "@graph" in data:
+                    for graph_item in data["@graph"]:
+                        dt_str = graph_item.get("datePublished") or graph_item.get("dateCreated")
+                        if dt_str:
+                            break
+                if dt_str:
+                    parsed_dt = parse_date_string(dt_str)
+                    if parsed_dt:
+                        return parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
+        except:
+            pass
+
+    # 3. Check time tags with datetime attribute
+    for time_tag in soup.find_all("time"):
+        dt_str = time_tag.get("datetime")
+        if dt_str:
+            parsed_dt = parse_date_string(dt_str)
+            if parsed_dt:
+                return parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    return None
+
+
+def scrape_article_text(url: str, timeout: int = 10) -> dict:
+    """
+    Fetches the HTML of the given article URL and extracts the main body text and publication date.
+    Cleans up boilerplate content like scripts, style sheets, and headers.
+    Returns a dict with 'text' and 'publish_date'.
+    """
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://www.google.com/"
+    }
+    result = {"text": "", "publish_date": None}
+    try:
+        response = requests.get(url, headers=headers, timeout=timeout)
+        if response.status_code == 200:
+            response.encoding = response.apparent_encoding or "utf-8"
+            soup = BeautifulSoup(response.text, "html.parser")
+            
+            # Extract publication date before decomposing elements
+            result["publish_date"] = extract_pub_date_from_html(soup)
+            
+            # Remove scripts, styles, and other non-content tags
+            for tag in soup(["script", "style", "nav", "header", "footer", "aside", "noscript", "iframe"]):
+                tag.decompose()
+                
+            # Common article body container selectors
+            article_body = soup.find("article") or soup.find(class_=re.compile(r"article-body|article-content|news-content|story-body|post-content|entry-content|detay-icerik|news-detail|detay_icerik", re.I))
+            
+            target = article_body if article_body else soup
+            paragraphs = target.find_all("p")
+            
+            text_blocks = []
+            for p in paragraphs:
+                txt = p.get_text().strip()
+                if not txt:
+                    continue
+                # Skip typical cookie consents, newsletter subscriptions, or social share widgets
+                if len(txt) < 35 and any(kw in txt.lower() for kw in ["çerez", "cookie", "takip et", "abone ol", "paylaş", "yorum yap", "tıklayın", "okumak için", "kabul ediyorum", "daha fazla"]):
+                    continue
+                text_blocks.append(txt)
+                
+            full_text = " ".join(text_blocks).strip()
+            # Normalize multiple spaces
+            full_text = re.sub(r'\s+', ' ', full_text)
+            if len(full_text) > 100:
+                result["text"] = full_text
+    except Exception as e:
+        logging.getLogger("ArticleScraper").error(f"Error scraping full article text from {url}: {e}")
+    return result
+

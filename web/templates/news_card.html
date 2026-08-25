@@ -97,19 +97,15 @@
     <!-- Genişleyen Detay Alanı -->
     <div class="card-details">
         <div class="card-details-inner">
-            {# news_summary is disabled per user request
-            {% set news_summary = (item.summary or '')|trim %}
-            {% if news_summary and news_summary != '...' and news_summary != '` and `' and news_summary|length > 20 %}
-                <div class="az-brief-box">
-                    {% if enable_ai_summary and item.ilgili_mi == 1 %}
+            {% if enable_ai_summary and item.ilgili_mi == 1 %}
+                {% set news_summary = (item.summary or '')|trim %}
+                {% if news_summary and news_summary != '...' and news_summary != '` and `' and news_summary|length > 20 %}
+                    <div class="az-brief-box">
                         <span class="az-brief-label">{{ t.az_brief_label }}</span>
-                    {% else %}
-                        <span class="az-brief-label" style="color: var(--text-muted);">{{ 'Haber Özeti' if lang == 'tr' else 'Xəbər Məzmunu' }}</span>
-                    {% endif %}
-                    <p class="az-brief-text">{{ news_summary }}</p>
-                </div>
+                        <p class="az-brief-text">{{ news_summary }}</p>
+                    </div>
+                {% endif %}
             {% endif %}
-            #}
 
             <!-- Alt Bilgi ve Sınıflandırma Rozetleri -->
             <div class="card-footer" onclick="event.stopPropagation()">
