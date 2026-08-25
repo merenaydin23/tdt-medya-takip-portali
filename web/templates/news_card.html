@@ -1,0 +1,148 @@
+<div class="news-card {% if item.ilgili_mi == 1 %}az-relevant-card{% endif %}" 
+     id="card-{{ item.id }}" 
+     data-source="{{ item.source_name }}" 
+     data-category="{{ item.category }}"
+     data-is-other="{% if item.is_other_source %}true{% else %}false{% endif %}"
+     data-ilgili="{% if item.ilgili_mi == 1 %}true{% else %}false{% endif %}"
+     data-ilgi-kategorisi="{{ item.ilgi_kategorisi or 'İlgisiz' }}"
+     data-date="{{ item.publish_date }}"
+     onclick="toggleCardExpansion(this)">
+    
+    <!-- Kart Başlığı (Her Zaman Görünür) -->
+    <div class="card-header-main">
+        <div class="card-meta">
+            <span class="source-tag">{{ item.source_name }}</span>
+            {% if item.author %}
+                <span class="author-tag">• {{ item.author }}</span>
+            {% endif %}
+            <span class="date-tag">{{ item.publish_date.split(' ')[1][:5] }}</span>
+            
+            {% if item.ilgili_mi == 1 %}
+                {% set badge_info = {
+                    'azerbaycan': {'flag': '🇦🇿', 'title_tr': 'Azerbaycan Gündemi', 'title_az': 'Azərbaycan Gündəmi'},
+                    'kazakistan': {'flag': '🇰🇿', 'title_tr': 'Kazakistan Gündemi', 'title_az': 'Qazaxıstan Gündəmi'},
+                    'kırgızistan': {'flag': '🇰🇬', 'title_tr': 'Kırgızistan Gündemi', 'title_az': 'Qırğızıstan Gündəmi'},
+                    'özbekistan': {'flag': '🇺🇿', 'title_tr': 'Özbekistan Gündemi', 'title_az': 'Özbəkistan Gündəmi'},
+                    'türkmenistan': {'flag': '🇹🇲', 'title_tr': 'Türkmenistan Gündemi', 'title_az': 'Türkmənistan Gündəmi'},
+                    'kktc': {'flag': '🇹🇷', 'title_tr': 'KKTC Gündemi', 'title_az': 'KKTC Gündəmi'}
+                } %}
+                
+                {% set cat_lower = (item.ilgi_kategorisi or '').lower() %}
+                {% set title_lower = (item.title or '').lower() %}
+                {% set is_tdt_card = 'türk devletleri' in cat_lower or 'bölgesel' in cat_lower or 'tdt' in cat_lower or 'türk dünyası' in cat_lower or 'türk devletleri' in title_lower or 'türk dünyası' in title_lower or 'tdt' in title_lower %}
+                
+                {% if is_tdt_card %}
+                    {% set badge_flag = '🌐' %}
+                    {% set badge_title = 'Türk Dünyası Ortak Gündemi' if lang == 'tr' else 'Türk Dünyası Ortaq Gündəmi' %}
+                {% elif ',' in cat_lower %}
+                    <!-- Ortak Gündem -->
+                    {% set ns = namespace(flags='', titles='') %}
+                    {% for c in cat_lower.split(',') %}
+                        {% set c_clean = c.strip() %}
+                        {% set info = badge_info[c_clean] %}
+                        {% if info %}
+                            {% set t_val = info.title_tr if lang == 'tr' else info.title_az %}
+                            {% set t_short = t_val.replace(' Gündemi', '').replace(' Gündəmi', '') %}
+                            {% if ns.flags == '' %}
+                                {% set ns.flags = info.flag %}
+                                {% set ns.titles = t_short %}
+                            {% else %}
+                                {% set ns.flags = ns.flags ~ ' ' ~ info.flag %}
+                                {% set ns.titles = ns.titles ~ ' - ' ~ t_short %}
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    {% set badge_flag = ns.flags %}
+                    {% set badge_title = ns.titles ~ ' Ortak Gündemi' if lang == 'tr' else ns.titles ~ ' Ortaq Gündəmi' %}
+                {% else %}
+                    <!-- Tekil Gündem -->
+                    {% set info = badge_info[cat_lower] %}
+                    {% if info %}
+                        {% set badge_flag = info.flag %}
+                        {% set badge_title = info.title_tr if lang == 'tr' else info.title_az %}
+                    {% else %}
+                        {% set badge_flag = '🇦🇿' %}
+                        {% set badge_title = 'Azerbaycan Gündemi' if lang == 'tr' else 'Azərbaycan Gündəmi' %}
+                    {% endif %}
+                {% endif %}
+
+                <div class="az-agenda-badge-wrapper" onclick="event.stopPropagation()">
+                    <span class="az-agenda-badge">
+                        {{ badge_flag }} {{ badge_title }}
+                        {% if item.ilgi_kategorisi and ',' not in item.ilgi_kategorisi and item.ilgi_kategorisi not in ('İlgisiz', 'Doğrudan', 'Kazakistan', 'Kırgızistan', 'Özbekistan', 'Türkmenistan', 'KKTC') %}
+                            <span class="az-badge-sub">• {{ item.ilgi_kategorisi }}</span>
+                        {% endif %}
+                    </span>
+                    <div class="az-badge-tooltip">
+                        <div class="az-tooltip-header">
+                            <span>{{ badge_flag }} {{ item.ilgi_kategorisi or badge_title }}</span>
+                            <span class="az-tooltip-score">{% if item.guven_skoru %}%{{ (item.guven_skoru * 100)|round|int }}{% else %}%95{% endif %}</span>
+                        </div>
+                        <p class="az-tooltip-desc">{{ item.gerekce or item.llm_relevance_explanation or 'Gündem ile ilgili haber.' }}</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="title-row">
+            <h3 class="card-title">{{ item.title }}</h3>
+            <span class="chevron-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </span>
+        </div>
+    </div>
+
+    <!-- Genişleyen Detay Alanı -->
+    <div class="card-details">
+        <div class="card-details-inner">
+            {# news_summary is disabled per user request
+            {% set news_summary = (item.summary or '')|trim %}
+            {% if news_summary and news_summary != '...' and news_summary != '` and `' and news_summary|length > 20 %}
+                <div class="az-brief-box">
+                    {% if enable_ai_summary and item.ilgili_mi == 1 %}
+                        <span class="az-brief-label">{{ t.az_brief_label }}</span>
+                    {% else %}
+                        <span class="az-brief-label" style="color: var(--text-muted);">{{ 'Haber Özeti' if lang == 'tr' else 'Xəbər Məzmunu' }}</span>
+                    {% endif %}
+                    <p class="az-brief-text">{{ news_summary }}</p>
+                </div>
+            {% endif %}
+            #}
+
+            <!-- Alt Bilgi ve Sınıflandırma Rozetleri -->
+            <div class="card-footer" onclick="event.stopPropagation()">
+                <div class="tags-cluster">
+                    {% if item.relevance_status %}
+                        <span class="badge badge-relevance" title="{{ item.llm_relevance_explanation }}">
+                            {% if 'Stage 1' in item.relevance_status %}
+                                {{ t.keyword_badge }}
+                            {% elif 'Stage 2' in item.relevance_status %}
+                                {{ t.llm_badge }}
+                            {% else %}
+                                {{ t.genel_badge }}
+                            {% endif %}
+                        </span>
+                    {% endif %}
+
+                    {% if item.relevance_aspect and item.relevance_aspect != 'Genel' %}
+                        <span class="badge badge-aspect">
+                            📌 {{ item.relevance_aspect }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="link-original">
+                    {{ t.original_link }}
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
