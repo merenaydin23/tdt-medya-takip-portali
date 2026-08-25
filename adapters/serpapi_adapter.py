@@ -70,10 +70,26 @@ class SerpApiAdapter:
             "Azerbaycan Kafkasya Türk Dünyası haberleri",
             "Türk Devletleri Teşkilatı OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs",
             "Türkiye güncel gelişmeler",
+            # Core 17 Sources:
+            "site:aa.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:trthaber.com (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:iha.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:dha.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
             "site:ntv.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
             "site:haberturk.com (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:milliyet.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:hurriyet.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:ahaber.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:yenisafak.com (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:sabah.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:turkiyegazetesi.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:sozcu.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:cumhuriyet.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:halktv.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:t24.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            "site:birgun.net (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
+            # Extra Sources:
             "site:cnnturk.com (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
-            "site:dha.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
             "site:ekonomim.com (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
             "site:gazeteduvar.com.tr (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
             "site:karar.com (Azerbaycan OR Kazakistan OR Kırgızistan OR Özbekistan OR Türkmenistan OR KKTC OR Kıbrıs)",
@@ -106,7 +122,7 @@ class SerpApiAdapter:
                 logger.error(f"Error querying SerpApi for query '{q}': {e}")
             return []
 
-        with ThreadPoolExecutor(max_workers=8) as executor:
+        with ThreadPoolExecutor(max_workers=16) as executor:
             res_lists = executor.map(_fetch_query, search_queries)
             for res in res_lists:
                 all_results.extend(res)
