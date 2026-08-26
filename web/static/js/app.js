@@ -209,45 +209,68 @@ function applyFiltersAndPagination() {
             if (!isIlgili) {
                 matchesTab = false;
             } else {
-                const lowerViewTab = activeViewTab.toLowerCase();
-                const lowerAspect = ilgiKategorisi.toLowerCase();
-                const otherTurkic = ['kazakistan', 'kırgızistan', 'özbekistan', 'türkmenistan', 'kktc'];
-                const isTDT = lowerAspect.includes('türk devletleri') || 
-                              lowerAspect.includes('bölgesel') || 
-                              lowerAspect.includes('tdt') || 
-                              lowerAspect.includes('türk dünyası') ||
-                              cardTitle.includes('türk devletleri') || 
-                              cardTitle.includes('türk dünyası') || 
-                              cardTitle.includes('tdt');
+                function normalizeTr(s) {
+                    return (s || '')
+                        .replace(/İ/g, 'i')
+                        .replace(/I/g, 'ı')
+                        .replace(/ı/g, 'i')
+                        .replace(/ö/g, 'o')
+                        .replace(/ü/g, 'u')
+                        .replace(/ş/g, 's')
+                        .replace(/ç/g, 'c')
+                        .replace(/ğ/g, 'g')
+                        .toLowerCase()
+                        .trim();
+                }
+
+                const nViewTab = normalizeTr(activeViewTab);
+                const nAspect = normalizeTr(ilgiKategorisi);
+                const nTitle = normalizeTr(cardTitle);
+
+                // TDT geneli konular tüm sekmelerde görünsün
+                const isTDT = nAspect.includes('turk devletleri') || 
+                              nAspect.includes('bolgesel') || 
+                              nAspect.includes('tdt') || 
+                              nAspect.includes('turk dunyasi') ||
+                              nTitle.includes('turk devletleri') || 
+                              nTitle.includes('turk dunyasi') || 
+                              nTitle.includes('tdt');
 
                 if (isTDT) {
-                    // TDT / Türk Devletleri / Bölgesel news concerns all countries!
+                    // TDT gündemi: tüm ülke sekmelerinde göster
                     matchesTab = true;
-                    // If Azerbaijani tab has active category subfilter, also apply it
-                    if (lowerViewTab === 'azerbaycan' && activeAzSubcategory !== 'all') {
-                        if (lowerAspect !== activeAzSubcategory.toLowerCase() &&
-                            !lowerAspect.includes(activeAzSubcategory.toLowerCase())) {
-                            matchesTab = false;
-                        }
-                    }
-                } else if (lowerViewTab === 'azerbaycan') {
-                    // It is related to Azerbaijan if it's NOT other Turkic countries
-                    if (otherTurkic.includes(lowerAspect)) {
-                        matchesTab = false;
-                    } else if (activeAzSubcategory !== 'all') {
-                        // Subfilter matching for Azerbaijan
-                        if (lowerAspect !== activeAzSubcategory.toLowerCase() &&
-                            !lowerAspect.includes(activeAzSubcategory.toLowerCase())) {
+                    if (nViewTab === 'azerbaycan' && activeAzSubcategory !== 'all') {
+                        const nSub = normalizeTr(activeAzSubcategory);
+                        if (!nAspect.includes(nSub)) {
                             matchesTab = false;
                         }
                     }
                 } else {
-                    // It is one of the other countries
-                    // Replace 'ı' with 'i' for Kyrgyz comparison to be safe
-                    const normAspect = lowerAspect.replace('ı', 'i');
-                    const normViewTab = lowerViewTab.replace('ı', 'i');
-                    if (normAspect !== normViewTab && !normAspect.includes(normViewTab)) {
-                        matchesTab = false;
+                    // Virgülle ayrılmış çoklu ülke kategorisini parçala
+                    // Örn: "Kazakistan, KKTC" -> ["kazakistan", "kktc"]
+                    const categoryParts = nAspect.split(',').map(p => p.trim()).filter(p => p.length > 0);
+
+                    if (nViewTab === 'azerbaycan') {
+                        // Azerbaycan sekmesi: ilgiKategorisi'nde "azerbaycan" geçmeli
+                        // ya da saf konu kategorisi olmalı (ülke adı içermiyorsa)
+                        const allCountries = ['azerbaycan', 'kazakistan', 'kirgizistan', 'ozbekistan', 'turkmenistan', 'kktc'];
+                        const hasAnyCountry = allCountries.some(c => categoryParts.some(p => p.includes(c)));
+                        const hasAzerbaijan = categoryParts.some(p => p.includes('azerbaycan'));
+
+                        if (hasAnyCountry && !hasAzerbaijan) {
+                            matchesTab = false;
+                        } else if (activeAzSubcategory !== 'all') {
+                            const nSub = normalizeTr(activeAzSubcategory);
+                            if (!nAspect.includes(nSub)) {
+                                matchesTab = false;
+                            }
+                        }
+                    } else {
+                        // Diğer ülke sekmeleri: kategori parçaları içinde sekme adı geçmeli
+                        const tabMatchesAnyPart = categoryParts.some(p => p.includes(nViewTab));
+                        if (!tabMatchesAnyPart) {
+                            matchesTab = false;
+                        }
                     }
                 }
             }

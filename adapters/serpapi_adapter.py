@@ -16,6 +16,7 @@ class SerpApiAdapter:
         self.url = "https://serpapi.com/search.json"
         self.log_file = BASE_DIR / "logs" / "serpapi_usage.log"
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        self.quota_exceeded = False
 
     def _log_usage(self, query_count: int):
         """Logs SerpApi usage count and estimated cost to logs/serpapi_usage.log."""
@@ -30,8 +31,7 @@ class SerpApiAdapter:
 
     def fetch_source_backup(self, source_name: str, domain: str, category: str) -> list:
         """Fetches news specifically from a configured site domain using google_news engine."""
-        if not self.api_key:
-            logger.warning("SERPAPI_KEY is not set. Skipping SerpApi search.")
+        if not self.api_key or self.quota_exceeded:
             return []
 
         params = {
@@ -46,6 +46,11 @@ class SerpApiAdapter:
             logger.info(f"Querying SerpApi for source '{source_name}' ({domain})...")
             response = requests.get(self.url, params=params, timeout=6)
             self._log_usage(1)
+
+            if response.status_code == 429:
+                logger.warning("SerpApi quota exceeded (429). Disabling SerpApi for this session.")
+                self.quota_exceeded = True
+                return []
 
             if response.status_code != 200:
                 logger.error(f"SerpApi returned status code {response.status_code}: {response.text}")

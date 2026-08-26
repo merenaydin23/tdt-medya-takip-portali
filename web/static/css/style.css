@@ -353,7 +353,9 @@ body {
 /* Azerbaycan Gündemi Rozeti & Tooltip */
 .az-agenda-badge-wrapper {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     margin-left: 6px;
 }
 
@@ -361,43 +363,62 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 700;
+    padding: 2px 9px 2px 7px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(0, 146, 188, 0.12), rgba(0, 151, 117, 0.12));
+    color: #0e7490;
+    border: 1px solid rgba(0, 146, 188, 0.3);
+    cursor: help;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
+.az-agenda-badge:hover {
+    background: linear-gradient(135deg, rgba(0, 146, 188, 0.22), rgba(0, 151, 117, 0.2));
+    box-shadow: 0 1px 5px rgba(0, 146, 188, 0.2);
+    border-color: rgba(0, 146, 188, 0.5);
+}
+
+.az-badge-sub {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 600;
     padding: 2px 8px;
-    border-radius: 6px;
-    background: rgba(0, 181, 142, 0.12);
-    color: #087f5b;
-    border: 1px solid rgba(0, 181, 142, 0.35);
+    border-radius: 20px;
+    background: rgba(228, 0, 43, 0.08);
+    color: #be123c;
+    border: 1px solid rgba(228, 0, 43, 0.2);
+    white-space: nowrap;
+    letter-spacing: 0.01em;
     cursor: help;
     transition: all 0.2s ease;
 }
 
-.az-agenda-badge:hover {
-    background: rgba(0, 181, 142, 0.22);
-    box-shadow: 0 1px 4px rgba(0, 181, 142, 0.2);
-}
-
-.az-badge-sub {
-    font-weight: 500;
-    opacity: 0.85;
+.az-badge-sub:hover {
+    background: rgba(228, 0, 43, 0.14);
+    border-color: rgba(228, 0, 43, 0.35);
 }
 
 .az-badge-tooltip {
     visibility: hidden;
     opacity: 0;
     position: absolute;
-    top: 100%;
+    top: calc(100% + 6px);
     left: 0;
-    transform: translateY(6px);
     background: #1e293b;
     color: #f8fafc;
     padding: 10px 12px;
-    border-radius: 8px;
+    border-radius: 10px;
     width: 260px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     z-index: 50;
     transition: opacity 0.2s ease, transform 0.2s ease;
     pointer-events: none;
+    transform: translateY(4px);
 }
 
 .az-agenda-badge-wrapper:hover .az-badge-tooltip {
@@ -429,6 +450,7 @@ body {
     color: #e2e8f0;
     margin: 0;
 }
+
 
 .btn {
     display: inline-flex;
@@ -829,8 +851,38 @@ body {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: 14px;
     width: 100%;
+}
+
+.title-side-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.card-time-badge-side {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    letter-spacing: 0.01em;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+}
+
+.news-card:hover .card-time-badge-side {
+    background: #e0f2fe;
+    border-color: #bae6fd;
+    color: var(--az-blue);
 }
 
 .card-title {
@@ -839,6 +891,7 @@ body {
     line-height: 1.35;
     color: var(--text-main);
     transition: color 0.15s ease;
+    flex: 1;
 }
 
 .news-card:hover .card-title {
@@ -851,8 +904,14 @@ body {
     justify-content: center;
     color: var(--text-muted);
     transition: transform 0.25s ease;
-    margin-top: 2px;
     flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+    .card-time-badge-side {
+        font-size: 11px;
+        padding: 2px 6px;
+    }
 }
 
 /* Genişleyen Detay Bölümü */

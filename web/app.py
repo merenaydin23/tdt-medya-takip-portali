@@ -199,14 +199,13 @@ def resolve_source_category(source_name: str, current_cat: str = None) -> str:
     return CATEGORIES["OTHER"]
 
 def create_app():
+    templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
     app = Flask(
         __name__,
-        template_folder=str(BASE_DIR / "web" / "templates"),
-        static_folder=str(BASE_DIR / "web" / "static")
+        template_folder=templates_dir,
+        static_folder=static_dir
     )
-
-    # Initialize database
-    init_db()
 
     @app.route("/")
     def index():
@@ -323,17 +322,32 @@ def create_app():
                     country_counts["turkmenistan"] += 1
                     country_counts["kktc"] += 1
                 else:
-                    if "kazakistan" in cat:
-                        country_counts["kazakistan"] += 1
-                    elif "kırgızistan" in cat:
-                        country_counts["kirgizistan"] += 1
-                    elif "özbekistan" in cat:
-                        country_counts["ozbekistan"] += 1
-                    elif "türkmenistan" in cat:
-                        country_counts["turkmenistan"] += 1
-                    elif "kktc" in cat:
-                        country_counts["kktc"] += 1
-                    else:
+                    # Virgülle ayrılmış tüm parçaları kontrol et
+                    # Örn: "Kazakistan, KKTC" -> her ülkede say
+                    cat_parts = [p.strip() for p in cat.split(",")]
+                    matched_any_country = False
+                    for part in cat_parts:
+                        if "kazakistan" in part:
+                            country_counts["kazakistan"] += 1
+                            matched_any_country = True
+                        if "k\u0131rg\u0131zistan" in part or "kirgizistan" in part:
+                            country_counts["kirgizistan"] += 1
+                            matched_any_country = True
+                        if "\u00f6zbekistan" in part or "ozbekistan" in part:
+                            country_counts["ozbekistan"] += 1
+                            matched_any_country = True
+                        if "t\u00fcrkmenistan" in part or "turkmenistan" in part:
+                            country_counts["turkmenistan"] += 1
+                            matched_any_country = True
+                        if "kktc" in part:
+                            country_counts["kktc"] += 1
+                            matched_any_country = True
+                        if "azerbaycan" in part:
+                            country_counts["azerbaycan"] += 1
+                            matched_any_country = True
+
+                    # Saf konu kategorisi (ülke adı geçmiyor) → sadece Azerbaycan sayacı
+                    if not matched_any_country:
                         country_counts["azerbaycan"] += 1
 
         # Group news by source — order by article count (highest first)

@@ -15,82 +15,27 @@
             {% if item.author %}
                 <span class="author-tag">• {{ item.author }}</span>
             {% endif %}
-            <span class="date-tag">{{ item.publish_date.split(' ')[1][:5] }}</span>
             
-            {% if item.ilgili_mi == 1 %}
-                {% set badge_info = {
-                    'azerbaycan': {'flag': '🇦🇿', 'title_tr': 'Azerbaycan Gündemi', 'title_az': 'Azərbaycan Gündəmi'},
-                    'kazakistan': {'flag': '🇰🇿', 'title_tr': 'Kazakistan Gündemi', 'title_az': 'Qazaxıstan Gündəmi'},
-                    'kırgızistan': {'flag': '🇰🇬', 'title_tr': 'Kırgızistan Gündemi', 'title_az': 'Qırğızıstan Gündəmi'},
-                    'özbekistan': {'flag': '🇺🇿', 'title_tr': 'Özbekistan Gündemi', 'title_az': 'Özbəkistan Gündəmi'},
-                    'türkmenistan': {'flag': '🇹🇲', 'title_tr': 'Türkmenistan Gündemi', 'title_az': 'Türkmənistan Gündəmi'},
-                    'kktc': {'flag': '🇹🇷', 'title_tr': 'KKTC Gündemi', 'title_az': 'KKTC Gündəmi'}
-                } %}
-                
-                {% set cat_lower = (item.ilgi_kategorisi or '').lower() %}
-                {% set title_lower = (item.title or '').lower() %}
-                {% set is_tdt_card = 'türk devletleri' in cat_lower or 'bölgesel' in cat_lower or 'tdt' in cat_lower or 'türk dünyası' in cat_lower or 'türk devletleri' in title_lower or 'türk dünyası' in title_lower or 'tdt' in title_lower %}
-                
-                {% if is_tdt_card %}
-                    {% set badge_flag = '🌐' %}
-                    {% set badge_title = 'Türk Dünyası Ortak Gündemi' if lang == 'tr' else 'Türk Dünyası Ortaq Gündəmi' %}
-                {% elif ',' in cat_lower %}
-                    <!-- Ortak Gündem -->
-                    {% set ns = namespace(flags='', titles='') %}
-                    {% for c in cat_lower.split(',') %}
-                        {% set c_clean = c.strip() %}
-                        {% set info = badge_info[c_clean] %}
-                        {% if info %}
-                            {% set t_val = info.title_tr if lang == 'tr' else info.title_az %}
-                            {% set t_short = t_val.replace(' Gündemi', '').replace(' Gündəmi', '') %}
-                            {% if ns.flags == '' %}
-                                {% set ns.flags = info.flag %}
-                                {% set ns.titles = t_short %}
-                            {% else %}
-                                {% set ns.flags = ns.flags ~ ' ' ~ info.flag %}
-                                {% set ns.titles = ns.titles ~ ' - ' ~ t_short %}
-                            {% endif %}
-                        {% endif %}
-                    {% endfor %}
-                    {% set badge_flag = ns.flags %}
-                    {% set badge_title = ns.titles ~ ' Ortak Gündemi' if lang == 'tr' else ns.titles ~ ' Ortaq Gündəmi' %}
-                {% else %}
-                    <!-- Tekil Gündem -->
-                    {% set info = badge_info[cat_lower] %}
-                    {% if info %}
-                        {% set badge_flag = info.flag %}
-                        {% set badge_title = info.title_tr if lang == 'tr' else info.title_az %}
-                    {% else %}
-                        {% set badge_flag = '🇦🇿' %}
-                        {% set badge_title = 'Azerbaycan Gündemi' if lang == 'tr' else 'Azərbaycan Gündəmi' %}
-                    {% endif %}
-                {% endif %}
 
-                <div class="az-agenda-badge-wrapper" onclick="event.stopPropagation()">
-                    <span class="az-agenda-badge">
-                        {{ badge_flag }} {{ badge_title }}
-                        {% if item.ilgi_kategorisi and ',' not in item.ilgi_kategorisi and item.ilgi_kategorisi not in ('İlgisiz', 'Doğrudan', 'Kazakistan', 'Kırgızistan', 'Özbekistan', 'Türkmenistan', 'KKTC') %}
-                            <span class="az-badge-sub">• {{ item.ilgi_kategorisi }}</span>
-                        {% endif %}
-                    </span>
-                    <div class="az-badge-tooltip">
-                        <div class="az-tooltip-header">
-                            <span>{{ badge_flag }} {{ item.ilgi_kategorisi or badge_title }}</span>
-                            <span class="az-tooltip-score">{% if item.guven_skoru %}%{{ (item.guven_skoru * 100)|round|int }}{% else %}%95{% endif %}</span>
-                        </div>
-                        <p class="az-tooltip-desc">{{ item.gerekce or item.llm_relevance_explanation or 'Gündem ile ilgili haber.' }}</p>
-                    </div>
-                </div>
-            {% endif %}
         </div>
 
         <div class="title-row">
             <h3 class="card-title">{{ item.title }}</h3>
-            <span class="chevron-icon">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-            </span>
+            <div class="title-side-actions">
+                {% set pub_time = item.publish_date.split(' ')[1][:5] if (' ' in item.publish_date and item.publish_date.split(' ')[1]|length >= 5) else item.publish_date[:5] %}
+                <span class="card-time-badge-side" title="Haberin Saati">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>{{ pub_time }}</span>
+                </span>
+                <span class="chevron-icon">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </span>
+            </div>
         </div>
     </div>
 

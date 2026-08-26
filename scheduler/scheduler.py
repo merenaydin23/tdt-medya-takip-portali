@@ -106,22 +106,33 @@ def run_media_monitoring_pipeline() -> dict:
         def parse_publish_date(date_str: str) -> datetime:
             if not date_str:
                 return datetime.now()
+            raw_str = date_str.strip()
+            dt_obj = None
             try:
-                parsed_tuple = email.utils.parsedate_tz(date_str)
+                parsed_tuple = email.utils.parsedate_tz(raw_str)
                 if parsed_tuple:
-                    return datetime.fromtimestamp(email.utils.mktime_tz(parsed_tuple))
+                    dt_obj = datetime.fromtimestamp(email.utils.mktime_tz(parsed_tuple))
             except:
                 pass
-            try:
-                return datetime.fromisoformat(date_str.split(".")[0].replace("Z", ""))
-            except:
-                pass
-            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+            if not dt_obj:
                 try:
-                    return datetime.strptime(date_str, fmt)
+                    dt_obj = datetime.fromisoformat(raw_str.split(".")[0].replace("Z", ""))
                 except:
                     pass
-            return datetime.now()
+            if not dt_obj:
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                    try:
+                        dt_obj = datetime.strptime(raw_str, fmt)
+                        break
+                    except:
+                        pass
+            if not dt_obj:
+                dt_obj = datetime.now()
+            # Cap to current local time so no future timestamps occur
+            now_dt = datetime.now()
+            if dt_obj > now_dt:
+                dt_obj = now_dt
+            return dt_obj
 
         # Retain articles from the last 3 days to account for timezone offsets and late night releases
         cutoff_date = datetime.now() - timedelta(days=3)
@@ -133,7 +144,7 @@ def run_media_monitoring_pipeline() -> dict:
             pub_date_str = item.get("publish_date", "")
             pub_dt = parse_publish_date(pub_date_str)
             
-            # Skip if older than today 00:00:00
+            # Skip if older than 3 days
             if pub_dt.replace(tzinfo=None) < cutoff_date.replace(tzinfo=None):
                 continue
 
