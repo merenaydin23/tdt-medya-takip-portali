@@ -7,6 +7,11 @@ WEAK_KEYWORDS = {"tap", "btc"}
 # Strong keywords: direct Azerbaijan markers (substring OK only with word boundaries)
 def _compile_kw(kw: str):
     # Use Unicode-aware word-ish boundaries: not letter/digit on either side
+    if kw.lower() == "bakı":
+        # Match strictly capitalized 'Bakı' to avoid collisions with:
+        # 1. Dotted 'Baki' (common name/word) due to case folding
+        # 2. Lowercase typos like 'bakı açısı' (bakış açısı) or geography terms
+        return re.compile(rf"(?<![\wçğıöşüÇĞİÖŞÜ])Bakı(?![\wçğıöşüÇĞİÖŞÜ])")
     return re.compile(rf"(?<![\wçğıöşüÇĞİÖŞÜ]){re.escape(kw)}(?![\wçğıöşüÇĞİÖŞÜ])", re.IGNORECASE)
 
 STAGE1_PATTERNS = [(_compile_kw(kw), kw) for kw in KEYWORDS_STAGE_1]
