@@ -17,6 +17,29 @@ from classifier import (
 
 logger = logging.getLogger("MediaPipeline")
 
+# Stopwords list for Jaccard similarity calculations
+STOPWORDS = {
+    'daha', 'kadar', 'sonra', 'once', 'gibi', 'icin', 'olan', 'olarak', 'veya',
+    'kendi', 'tarafından', 'uzere', 'altı', 'yeni', 'göre', 'gore', 'yoksa',
+    'yıllık', 'yılda', 'tarihli', 'sayılı', 'konu', 'haber', 'haberleri',
+    'gelen', 'gecen', 'geçen', 'böyle', 'boyle', 'şöyle', 'soyle', 'hakkında',
+    'hakkinda', 'çünkü', 'cunku', 'ancak', 'lakin', 'fakat', 'yine', 'hala'
+}
+
+def _get_word_set(text: str, min_len=5) -> set:
+    if not text:
+        return set()
+    import re
+    norm = text.lower().replace('ı', 'i').replace('ö', 'o').replace('ü', 'u').replace('ş', 's').replace('ç', 'c').replace('ğ', 'g')
+    words = re.findall(rf'[a-z]{{{min_len},}}', norm)
+    return {w for w in words if w not in STOPWORDS}
+
+def _jaccard_sim(set1: set, set2: set) -> float:
+    if not set1 or not set2:
+        return 0.0
+    return len(set1.intersection(set2)) / len(set1.union(set2))
+
+
 _is_running_lock = threading.Lock()
 _pipeline_status = {
     "is_running": False,
@@ -184,7 +207,7 @@ def run_media_monitoring_pipeline() -> dict:
             with ThreadPoolExecutor(max_workers=16) as executor:
                 list(executor.map(_scrape_worker, items_to_process))
 
-            # Deduplicate by content text to ensure the same news is not listed twice
+            # Deduplicate by fuzzy content and title similarity (Jaccard index)
             conn = get_connection()
             cursor = conn.cursor()
             cutoff_date_str = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
@@ -192,50 +215,60 @@ def run_media_monitoring_pipeline() -> dict:
             db_articles = cursor.fetchall()
             conn.close()
 
-            def _clean_for_dedup(t: str) -> str:
-                if not t:
-                    return ""
-                cleaned = "".join(ch for ch in t.lower() if ch.isalnum())
-                return cleaned[:200]
-
-            existing_summaries_clean = {
-                _clean_for_dedup(row["summary"])
-                for row in db_articles
-                if row["summary"] and len(row["summary"]) > 50
-            }
-            existing_titles_clean = {
-                _clean_for_dedup(row["title"])
-                for row in db_articles
-                if row["title"]
-            }
+            # Pre-calculate word sets for DB articles in the last 3 days
+            db_word_sets = []
+            for row in db_articles:
+                db_t_set = _get_word_set(row["title"], min_len=4)
+                db_b_set = _get_word_set(row["summary"], min_len=5)
+                db_word_sets.append((row["title"], db_t_set, db_b_set))
 
             deduped_items = []
-            seen_texts_in_run = set()
+            accepted_word_sets = []
 
             for item in items_to_process:
+                title_text = item.get("title") or ""
                 summary_text = item.get("summary") or ""
-                clean_text = _clean_for_dedup(summary_text)
-                clean_title = _clean_for_dedup(item.get("title") or "")
-                
-                # If text content is empty/short, fall back to title similarity
-                if not clean_text or len(summary_text) < 50:
-                    dup_key = f"title_{clean_title}"
-                    is_dup = clean_title in existing_titles_clean or dup_key in seen_texts_in_run
-                else:
-                    dup_key = f"text_{clean_text}"
-                    is_dup = clean_text in existing_summaries_clean or dup_key in seen_texts_in_run or clean_title in existing_titles_clean
+                t_set = _get_word_set(title_text, min_len=4)
+                b_set = _get_word_set(summary_text, min_len=5)
+
+                is_dup = False
+                dup_reason = ""
+
+                # 1. Compare with DB articles (last 3 days)
+                for db_title, db_t_set, db_b_set in db_word_sets:
+                    t_sim = _jaccard_sim(t_set, db_t_set)
+                    b_sim = _jaccard_sim(b_set, db_b_set)
+                    
+                    # Smart duplicate criteria
+                    # - If titles match > 50%
+                    # - If bodies match > 55%
+                    # - If both have significant overlap (title > 25% and body > 20%)
+                    if (t_sim > 0.50) or (b_sim > 0.55) or (t_sim > 0.25 and b_sim > 0.20):
+                        is_dup = True
+                        dup_reason = f"DB article: '{db_title}' (T_Sim: {t_sim:.2f}, B_Sim: {b_sim:.2f})"
+                        break
+
+                # 2. Compare with already accepted items in this run
+                if not is_dup:
+                    for acc_title, acc_t_set, acc_b_set in accepted_word_sets:
+                        t_sim = _jaccard_sim(t_set, acc_t_set)
+                        b_sim = _jaccard_sim(b_set, acc_b_set)
+                        
+                        if (t_sim > 0.50) or (b_sim > 0.55) or (t_sim > 0.25 and b_sim > 0.20):
+                            is_dup = True
+                            dup_reason = f"Run article: '{acc_title}' (T_Sim: {t_sim:.2f}, B_Sim: {b_sim:.2f})"
+                            break
 
                 if is_dup:
-                    logger.info(f"Skipping duplicate article by content/title: {item.get('title')}")
+                    logger.info(f"Skipping duplicate article by fuzzy similarity: '{title_text}' -> matched with {dup_reason}")
                     continue
 
-                seen_texts_in_run.add(dup_key)
-                if clean_title:
-                    seen_texts_in_run.add(f"title_{clean_title}")
+                accepted_word_sets.append((title_text, t_set, b_set))
                 deduped_items.append(item)
 
             logger.info(f"Deduplication by content complete. Reduced {len(items_to_process)} articles to {len(deduped_items)}.")
             items_to_process = deduped_items
+
 
         # Stage 1 keyword matching
         stage2_candidates = []
