@@ -19,10 +19,10 @@ Azerbaycan Cumhuriyeti Türkiye Büyükelçiliği Basın ve Halkla İlişkiler �
   * **Muhalif:** Sözcü, Cumhuriyet, Halk TV, T24, BirGün
 * **Google News & SerpApi Katmanı:**
   * NTV, Habertürk, CNN Türk, Demirören Haber Ajansı (DHA), Karar, Akşam, Star, Aydınlık, Gazete Duvar, Ekonomim/Dünya Gazetesi vb. 35'in üzerinde gazete ve haber kaynağı otomatik taranır.
-  * Mükerrer haber tespiti (Deduplication) ile aynı haberin tekrar eklenmesi engellenir.
+  * **Gelişmiş Akıllı Tekilleştirme (Fuzzy Deduplication):** Jaccard Benzerlik Endeksi (Token-Overlap) algoritması kullanılarak başlıklar ve haber gövdeleri arasındaki anlamsal benzerlik taranır. Aynı haberi farklı ifadelerle, başlık ekleriyle veya farklı gazetelerin imzalarıyla yayınlayan diğer kaynaklar (mükerrer/tekrar haberler) otomatik olarak elenerek haber akışının sade kalması sağlanır.
 
 ### 2. 🇦🇿 "Azerbaycan Gündemi" Sekmesi ve 5 Stratejik Kategori
-Tüm haber akışı içinden Azerbaycan'ı doğrudan veya dolaylı ilgilendiren gelişmeler Qwen LLM ile tespit edilerek 5 odaklı kategoride sunulur:
+Tüm haber akışı içinden Azerbaycan'ı doğrudan veya dolaylı ilgilendiren gelişmeler otomatik olarak tespit edilerek 5 odaklı kategoride sunulur:
 1. **🇦🇿 Ermenistan Hattı:** Ermenistan-Azerbaycan barış süreci, Zengezur koridoru, sınır görüşmeleri, Karabağ, Şuşa, Hankendi ve Paşinyan'ın açıklamaları.
 2. **🤝 Diplomasi & Siyaset:** Türkiye-Azerbaycan ikili resmi ilişkileri, Cumhurbaşkanı İlham Aliyev, Dışişleri Bakanlığı, Büyükelçilik faaliyetleri ve üst düzey heyet temasları.
 3. **🌐 Türk Devletleri / Bölgesel:** Türk Devletleri Teşkilatı (TDT), Orta Koridor, Nahçıvan ve Hazar bölgesi projeleri.
@@ -32,10 +32,6 @@ Tüm haber akışı içinden Azerbaycan'ı doğrudan veya dolaylı ilgilendiren 
 ### 3. 🤖 Yapay Zeka Destekli 2 Cümlelik Otomatik Özetleme
 * Taranan her haber için **Qwen LLM** tarafından diplomatik ve profesyonel üslupla 2 cümlelik net özetler arka planda paralel olarak (`max_workers=20`) üretilir.
 * Kullanıcı karta tıkladığında özet halihazırda hazır olduğu için bekleme yaşanmaz.
-
-### 4. 🏷️ İnteraktif Rozetler (Badges) ve Gerekçe Açıklamaları
-* Azerbaycan ile ilgili haber kartlarında **`🇦🇿 Azerbaycan Gündemi`** rozeti belirir.
-* Rozetin üzerine gelindiğinde (hover) yapay zekanın belirlediği **kategori, güven skoru (%95+) ve tek cümlelik gerekçe açıklaması** açılır bir tooltip kutusunda gösterilir.
 
 ### 5. 🔍 Anlık Başlık ve Anahtar Kelime Arama Motoru
 * Üst bardaki arama kutusuna yazıldığı anda başlık, özet, yazar veya kaynak bazında filtreleme yapılır.
