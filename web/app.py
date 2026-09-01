@@ -302,30 +302,19 @@ def create_app():
                     # Virgülle ayrılmış tüm parçaları kontrol et
                     # Örn: "Kazakistan, KKTC" -> her ülkede say
                     cat_parts = [p.strip() for p in cat.split(",")]
-                    matched_any_country = False
                     for part in cat_parts:
                         if "kazakistan" in part:
                             country_counts["kazakistan"] += 1
-                            matched_any_country = True
                         if "k\u0131rg\u0131zistan" in part or "kirgizistan" in part:
                             country_counts["kirgizistan"] += 1
-                            matched_any_country = True
                         if "\u00f6zbekistan" in part or "ozbekistan" in part:
                             country_counts["ozbekistan"] += 1
-                            matched_any_country = True
                         if "t\u00fcrkmenistan" in part or "turkmenistan" in part:
                             country_counts["turkmenistan"] += 1
-                            matched_any_country = True
                         if "kktc" in part:
                             country_counts["kktc"] += 1
-                            matched_any_country = True
                         if "azerbaycan" in part:
                             country_counts["azerbaycan"] += 1
-                            matched_any_country = True
-
-                    # Saf konu kategorisi (ülke adı geçmiyor) → sadece Azerbaycan sayacı
-                    if not matched_any_country:
-                        country_counts["azerbaycan"] += 1
 
         # Group news by source — order by article count (highest first)
         items_by_source = {}

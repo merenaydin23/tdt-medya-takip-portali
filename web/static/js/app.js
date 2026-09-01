@@ -251,13 +251,20 @@ function applyFiltersAndPagination() {
                     const categoryParts = nAspect.split(',').map(p => p.trim()).filter(p => p.length > 0);
 
                     if (nViewTab === 'azerbaycan') {
-                        // Azerbaycan sekmesi: ilgiKategorisi'nde "azerbaycan" geçmeli
-                        // ya da saf konu kategorisi olmalı (ülke adı içermiyorsa)
-                        const allCountries = ['azerbaycan', 'kazakistan', 'kirgizistan', 'ozbekistan', 'turkmenistan', 'kktc'];
-                        const hasAnyCountry = allCountries.some(c => categoryParts.some(p => p.includes(c)));
-                        const hasAzerbaijan = categoryParts.some(p => p.includes('azerbaycan'));
+                        // Azerbaycan sekmesi: İlgi kategorisi veya başlıkta MUTLAKA 'azerbaycan' (veya Ermenistan/Zengezur/Karabağ/Şuşa/Nahçıvan) geçmeli
+                        const hasAzerbaijan = categoryParts.some(p => p.includes('azerbaycan')) || 
+                                              nAspect.includes('azerbaycan') ||
+                                              nAspect.includes('ermenistan') ||
+                                              nAspect.includes('zengezur') ||
+                                              nAspect.includes('karabag') ||
+                                              nAspect.includes('susa') ||
+                                              nAspect.includes('nahcivan') ||
+                                              nTitle.includes('azerbaycan') ||
+                                              nTitle.includes('karabag') ||
+                                              nTitle.includes('zengezur') ||
+                                              nTitle.includes('nahcivan');
 
-                        if (hasAnyCountry && !hasAzerbaijan) {
+                        if (!hasAzerbaijan) {
                             matchesTab = false;
                         } else if (activeAzSubcategory !== 'all') {
                             const nSub = normalizeTr(activeAzSubcategory);
@@ -267,7 +274,7 @@ function applyFiltersAndPagination() {
                         }
                     } else {
                         // Diğer ülke sekmeleri: kategori parçaları içinde sekme adı geçmeli
-                        const tabMatchesAnyPart = categoryParts.some(p => p.includes(nViewTab));
+                        const tabMatchesAnyPart = categoryParts.some(p => p.includes(nViewTab)) || nAspect.includes(nViewTab);
                         if (!tabMatchesAnyPart) {
                             matchesTab = false;
                         }
