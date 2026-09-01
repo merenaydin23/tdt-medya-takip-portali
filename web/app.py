@@ -235,53 +235,31 @@ def create_app():
             s_name = n.get("source_name", "Bilinmeyen")
             raw_source_counts[s_name] = raw_source_counts.get(s_name, 0) + 1
 
-        # 1. Main 14 News Platforms (Always separate)
-        main_sources = []
-        core_names = set()
-        for src in SOURCES_CONFIG:
-            s_name = src["name"]
-            core_names.add(s_name.lower())
-            count = raw_source_counts.get(s_name, 0)
-            main_sources.append({
-                "id": src["id"],
-                "name": s_name,
-                "category": src["category"],
-                "count": count
-            })
-
-        # 2. Extra / External platforms
-        # If external source has >= 5 news -> separate button
-        # If external source has < 5 news -> grouped into "Diğer Kaynaklar"
-        extra_sources = []
-        extra_source_names = set()
+        # Dynamic 10-Article Threshold:
+        # If a platform has >= 10 articles -> shown as a dedicated sidebar tab.
+        # If a platform has < 10 articles -> grouped into "Diğer Kaynaklar".
+        prominent_sources = []
+        prominent_source_names = set()
         other_count = 0
         az_gundemi_count = 0
 
         for s_name, count in sorted(raw_source_counts.items(), key=lambda x: x[1], reverse=True):
-            if s_name.lower() in core_names:
-                continue
-            
-            if count >= 5:
-                s_id = "".join(ch for ch in s_name.lower() if ch.isalnum())[:12]
+            if count >= 10:
+                s_id = "".join(ch for ch in s_name.lower() if ch.isalnum())[:16]
                 s_cat = resolve_source_category(s_name, None)
-                extra_sources.append({
+                prominent_sources.append({
                     "id": s_id,
                     "name": s_name,
                     "category": s_cat,
                     "count": count
                 })
-                extra_source_names.add(s_name)
+                prominent_source_names.add(s_name)
             else:
                 other_count += count
 
-        # Sidebar + feed: most articles first
-        sidebar_sources = sorted(
-            [s for s in (main_sources + extra_sources) if s["count"] > 0],
-            key=lambda s: s["count"],
-            reverse=True
-        )
-        main_sources = sorted(main_sources, key=lambda s: s["count"], reverse=True)
-        extra_sources = sorted(extra_sources, key=lambda s: s["count"], reverse=True)
+        sidebar_sources = prominent_sources
+        main_sources = prominent_sources
+        extra_sources = []
 
         # Initialize country counts
         country_counts = {
@@ -296,11 +274,10 @@ def create_app():
         # Tag each news item
         for n in all_news:
             s_name = n.get("source_name", "Bilinmeyen")
-            is_core = s_name.lower() in core_names
-            is_extra = s_name in extra_source_names
+            is_prominent = s_name in prominent_source_names
             
-            # If not a recognized prominent channel (< 5 news) -> mark as other source
-            n["is_other_source"] = (not is_core and not is_extra)
+            # If not >= 10 articles -> mark as other source
+            n["is_other_source"] = not is_prominent
             n["category"] = resolve_source_category(s_name, n.get("category"))
             
             if n.get("ilgili_mi") in (1, True, "1"):
