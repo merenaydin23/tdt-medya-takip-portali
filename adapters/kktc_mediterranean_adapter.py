@@ -5,45 +5,49 @@ from bs4 import BeautifulSoup
 from .base_adapter import BaseAdapter
 from config import CATEGORIES
 
-logger = logging.getLogger("Adapter.KKTC_Mediterranean")
+logger = logging.getLogger("Adapter.MediterraneanLocal")
 
-class KKTC_MediterraneanAdapter(BaseAdapter):
+class MediterraneanLocalAdapter(BaseAdapter):
     """
-    Dedicated crawler for Northern Cyprus (KKTC) and Mediterranean Border/Port Media:
-    - KKTC: Kıbrıs Postası, Kıbrıs Gazetesi, Haber Kıbrıs, Yenidüzen, BRTK, Gündem Kıbrıs
-    - Mersin & Mediterranean: Mersin Haber, Mersin Portal, Güney Gazetesi, Çukurova Barış, Akdeniz Postası
+    Dedicated crawler for Turkey's Mediterranean Regional Media:
+    - Mersin: Mersin Haber, Mersin Portal, Güney Gazetesi, Akdeniz Postası, Çukurova Expres
+    - Adana: Çukurova Barış, Adana Haber, Bölge Gazetesi
+    - Hatay / İskenderun: Antakya Gazetesi, İskenderun Ses
+    - Antalya: Antalya Körfez, Akdeniz Manşet
     """
     def __init__(self):
         super().__init__(
-            source_id="kktc_mediterranean",
-            source_name="KKTC ve Akdeniz Basını",
+            source_id="mediterranean_local",
+            source_name="Akdeniz Bölge Basını (Mersin/Adana/Antalya/Hatay)",
             category=CATEGORIES.get("YEREL", CATEGORIES["OTHER"])
         )
 
         self.outlets = [
-            # 1. KKTC / Kıbrıs Basını
-            {"id": "kibrispostasi", "name": "Kıbrıs Postası", "domain": "kibrispostasi.com", "scrape_url": "https://www.kibrispostasi.com", "city": "Lefkoşa (KKTC)"},
-            {"id": "kibrisgazetesi", "name": "Kıbrıs Gazetesi", "domain": "kibrisgazetesi.com", "scrape_url": "https://www.kibrisgazetesi.com", "city": "Lefkoşa (KKTC)"},
-            {"id": "haberkibris", "name": "Haber Kıbrıs", "domain": "haberkibris.com", "scrape_url": "https://haberkibris.com", "city": "Lefkoşa (KKTC)"},
-            {"id": "yeniduzen", "name": "Yenidüzen", "domain": "yeniduzen.com", "scrape_url": "https://www.yeniduzen.com", "city": "Lefkoşa (KKTC)"},
-            {"id": "brtk", "name": "BRTK", "domain": "brtk.net", "scrape_url": "https://www.brtk.net", "city": "Lefkoşa (KKTC)"},
-            {"id": "gundemkibris", "name": "Gündem Kıbrıs", "domain": "gundemkibris.com", "scrape_url": "https://gundemkibris.com", "city": "Lefkoşa (KKTC)"},
-
-            # 2. Mersin & Akdeniz Bölge Basını (Kıbrıs deniz/hava kapısı ve Doğu Akdeniz merkezi)
+            # Mersin
             {"id": "mersinhaber", "name": "Mersin Haber", "domain": "mersinhaber.com", "scrape_url": "https://www.mersinhaber.com", "city": "Mersin"},
             {"id": "mersinportal", "name": "Mersin Portal", "domain": "mersinportal.com", "scrape_url": "https://www.mersinportal.com", "city": "Mersin"},
             {"id": "guneygazetesi", "name": "Güney Gazetesi", "domain": "guneygazetesi.com", "scrape_url": "https://guneygazetesi.com", "city": "Mersin"},
-            {"id": "cukurovabaris", "name": "Çukurova Barış", "domain": "cukurovabaris.com.tr", "scrape_url": "https://www.cukurovabaris.com.tr", "city": "Adana / Mersin"},
-            {"id": "akdenizpostasi", "name": "Akdeniz Postası", "domain": "akdenizpostasi.com.tr", "scrape_url": "https://akdenizpostasi.com.tr", "city": "Mersin"}
+            {"id": "akdenizpostasi", "name": "Akdeniz Postası", "domain": "akdenizpostasi.com.tr", "scrape_url": "https://akdenizpostasi.com.tr", "city": "Mersin"},
+            
+            # Adana
+            {"id": "cukurovabaris", "name": "Çukurova Barış", "domain": "cukurovabaris.com.tr", "scrape_url": "https://www.cukurovabaris.com.tr", "city": "Adana"},
+            {"id": "bolgegazetesi", "name": "Bölge Gazetesi", "domain": "bolgegazetesi.com.tr", "scrape_url": "https://bolgegazetesi.com.tr", "city": "Adana"},
+
+            # Hatay / İskenderun
+            {"id": "antakyagazetesi", "name": "Antakya Gazetesi", "domain": "antakyagazetesi.com", "scrape_url": "https://antakyagazetesi.com", "city": "Hatay"},
+            {"id": "iskenderunses", "name": "İskenderun Ses", "domain": "sesgazetesi-hatay.com", "scrape_url": "https://sesgazetesi-hatay.com", "city": "İskenderun"},
+
+            # Antalya
+            {"id": "antalyakorfez", "name": "Antalya Körfez", "domain": "korfezgazetesi.com", "scrape_url": "https://korfezgazetesi.com", "city": "Antalya"}
         ]
 
-        # Targeted regional thematic search queries
+        # Türkiye Akdeniz liman, lojistik ve bölgesel arama sorguları
         self.regional_queries = [
-            ("Mersin KKTC", "Mersin / KKTC"),
-            ("Mersin Kıbrıs", "Mersin / Kıbrıs"),
-            ("KKTC Türk Devletleri", "KKTC / TDT"),
-            ("Doğu Akdeniz KKTC", "Doğu Akdeniz / KKTC"),
-            ("Mersin Azerbaycan", "Mersin / Azerbaycan")
+            ("Mersin Limanı lojistik", "Mersin / Lojistik"),
+            ("Mersin deniz ticaret", "Mersin / Ticaret"),
+            ("Adana sanayi ihracat", "Adana / Ekonomi"),
+            ("Hatay İskenderun liman", "Hatay / Liman"),
+            ("Mersin Azerbaycan", "Mersin / Dış İlişkiler")
         ]
 
     def _fetch_outlet_news(self, outlet: dict) -> list:
@@ -68,7 +72,7 @@ class KKTC_MediterraneanAdapter(BaseAdapter):
         except Exception as e:
             logger.debug(f"RSS error for {outlet['name']}: {e}")
 
-        # 2. Direct HTML scraping on homepage
+        # 2. Direct HTML scraping
         try:
             html = self.fetch_url(outlet["scrape_url"])
             if html:
@@ -113,10 +117,10 @@ class KKTC_MediterraneanAdapter(BaseAdapter):
                 raw_title = it.get("title", "")
                 parts = raw_title.split(" - ")
                 title = parts[0].strip()
-                source = parts[1].strip() if len(parts) > 1 else f"Yerel Basın ({label})"
+                source = parts[1].strip() if len(parts) > 1 else f"Akdeniz Basını ({label})"
                 it["title"] = title
                 it["source_name"] = f"{source} ({label})"
-                it["source_id"] = "kktc_med_query"
+                it["source_id"] = "med_local_query"
                 it["category"] = self.category
                 it["veri_kaynagi"] = "RSS"
                 items.append(it)
@@ -135,5 +139,5 @@ class KKTC_MediterraneanAdapter(BaseAdapter):
             for q_items in query_results:
                 all_items.extend(q_items)
 
-        logger.info(f"KKTC_MediterraneanAdapter fetched {len(all_items)} articles across {len(self.outlets)} outlets and {len(self.regional_queries)} queries.")
+        logger.info(f"MediterraneanLocalAdapter fetched {len(all_items)} articles across {len(self.outlets)} Turkey Mediterranean outlets.")
         return all_items

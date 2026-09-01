@@ -134,6 +134,6 @@ SOURCES_CONFIG = [
 
     # 4. Sınır, Yerel ve Bölgesel Basın
     {"id": "regional_border", "name": "Sınır & Kafkas Basını (Iğdır/Kars/Ardahan/Ağrı)", "category": CATEGORIES["YEREL"], "type": "rss/scrape", "domain": "kha.com.tr"},
-    {"id": "kktc_mediterranean", "name": "KKTC & Akdeniz Basını (Mersin/Kıbrıs)", "category": CATEGORIES["YEREL"], "type": "rss/scrape", "domain": "kibrispostasi.com"},
+    {"id": "mediterranean_local", "name": "Akdeniz Bölge Basını (Mersin/Adana/Hatay/Antalya)", "category": CATEGORIES["YEREL"], "type": "rss/scrape", "domain": "mersinhaber.com"},
     {"id": "anatolian_local", "name": "Anadolu İlleri Yerel Basını", "category": CATEGORIES["YEREL"], "type": "rss/scrape", "domain": "olay.com.tr"}
 ]
