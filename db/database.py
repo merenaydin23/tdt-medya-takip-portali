@@ -89,6 +89,15 @@ def clean_leading_time(text: str) -> str:
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
+def _normalize_title_for_view_dedup(t: str) -> str:
+    if not t:
+        return ""
+    import re
+    t = re.sub(r'^[0-2]?\d[:.][0-5]\d\s*[-–—:]?\s*', '', t)
+    t = re.sub(r'^(?:gündem|son dakika|resmi ilan|haberler|flaş)\s*[-–—:]?\s*', '', t, flags=re.I)
+    t = re.sub(r'\s*[-–—|]\s*(?:Haberler|Sözcü|Halk TV|TRT Haber|Yeni Şafak|Cumhuriyet|A Haber|NTV|DHA|İHA|Bengü Türk|Bengütürk).*$', '', t, flags=re.I)
+    return "".join(ch for ch in t.lower() if ch.isalnum())
+
 def save_news_item(item: dict) -> int:
     conn = get_connection()
     cursor = conn.cursor()
@@ -103,6 +112,24 @@ def save_news_item(item: dict) -> int:
     ilgi_kategorisi = item.get("ilgi_kategorisi") or ("Doğrudan" if ilgili_mi else "İlgisiz")
     guven_skoru = float(item.get("guven_skoru") or (1.0 if ilgili_mi else 0.0))
     gerekce = item.get("gerekce") or item.get("llm_relevance_explanation") or ""
+
+    # Check if this exact source already has an article with the exact/near same title on this date
+    dt_day = publish_date[:10]
+    norm_t = _normalize_title_for_view_dedup(title)
+    s_name = item.get("source_name", "Bilinmeyen")
+    if norm_t:
+        cursor.execute("SELECT id, link, ilgili_mi, title FROM news WHERE source_name = ? AND publish_date LIKE ?", (s_name, f"{dt_day}%"))
+        existing_rows = cursor.fetchall()
+        for er in existing_rows:
+            er_norm = _normalize_title_for_view_dedup(er["title"])
+            if er_norm == norm_t:
+                existing_id = er["id"]
+                # If existing had google news link and new has direct site link, update link
+                if "news.google.com" in (er["link"] or "") and "news.google.com" not in (item.get("link") or ""):
+                    cursor.execute("UPDATE news SET link = ? WHERE id = ?", (item.get("link"), existing_id))
+                    conn.commit()
+                conn.close()
+                return existing_id
 
     try:
         cursor.execute("""
@@ -158,13 +185,11 @@ def save_news_item(item: dict) -> int:
         ))
         conn.commit()
         last_id = cursor.lastrowid
-        if not last_id or last_id == 0:
-            cursor.execute("SELECT id FROM news WHERE link = ?", (item.get("link"),))
-            row = cursor.fetchone()
-            last_id = row["id"] if row else None
-        return last_id
-    finally:
         conn.close()
+        return last_id
+    except Exception:
+        conn.close()
+        return None
 
 def update_news_relevance_classification(news_id: int, ilgili_mi: bool, ilgi_kategorisi: str, guven_skoru: float, gerekce: str):
     conn = get_connection()
@@ -222,7 +247,20 @@ def get_news_by_date(date_str: str, only_relevant: bool = True) -> list:
     cursor.execute(query, (start_dt, end_dt))
     rows = [dict(row) for row in cursor.fetchall()]
     conn.close()
-    return rows
+
+    # Guaranteed in-memory intra-source deduplication
+    deduped_rows = []
+    seen_source_titles = set()
+    for row in rows:
+        source_name = row.get("source_name", "")
+        norm_t = _normalize_title_for_view_dedup(row.get("title", ""))
+        key = (source_name, norm_t) if norm_t else (source_name, row.get("link"))
+        if key in seen_source_titles:
+            continue
+        seen_source_titles.add(key)
+        deduped_rows.append(row)
+
+    return deduped_rows
 
 def get_available_dates() -> list:
     conn = get_connection()
