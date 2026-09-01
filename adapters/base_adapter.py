@@ -13,7 +13,48 @@ _SESSION = requests.Session()
 _retries = Retry(total=1, backoff_factor=0.2, status_forcelist=[500, 502, 503, 504])
 _adapter = HTTPAdapter(pool_connections=100, pool_maxsize=100, max_retries=_retries)
 _SESSION.mount('http://', _adapter)
-_SESSION.mount('https://', _adapter)
+def is_junk_title(title: str) -> bool:
+    if not title:
+        return True
+    # Normalize whitespace
+    title_clean = re.sub(r'\s+', ' ', str(title)).strip()
+    # Strip leading dates/times
+    title_clean = re.sub(r'^\d{1,2}\s+[A-ZÇĞİÖŞÜa-zçğıöşü]+\s+\d{4}\s*\d{0,2}[:.]?\d{0,2}\s*[-–—]?\s*', '', title_clean)
+    title_clean = re.sub(r'^\d{1,2}[:.]\d{2}(:\d{2})?\s*[-–—]?\s*', '', title_clean).strip()
+    
+    # Real news headlines must have at least 20 characters and at least 4 words
+    words = [w for w in title_clean.split() if len(w) > 1]
+    if len(title_clean) < 20 or len(words) < 4:
+        return True
+        
+    title_lower = title_clean.lower()
+    
+    # Navigation / Category / UI Junk patterns
+    junk_patterns = [
+        "sayfa /", "sayfa 1", "sayfa 2", "foto galeri", "video galeri", "videolar",
+        "yazarlarımız", "çerez politikası", "gizlilik politikası", "künye", "kunye",
+        "kurumsal", "bize ulaşın", "iletişim", "site haritası", "whatsapp ihbar",
+        "taziye ilanları", "vefat edenler", "nöbetçi eczane", "nobetci eczane",
+        "sayısal loto", "süper loto", "on numara", "şans topu", "milli piyango",
+        "çekiliş sonuçları", "bilet sorgulama", "günlük burç", "burç yorumları"
+    ]
+    if any(jp in title_lower for jp in junk_patterns):
+        return True
+
+    # Category / Menu titles that are not actual news headlines
+    generic_categories = [
+        "haberleri", "tüm haberler", "tum haberler", "son dakika haberleri",
+        "manşet haberleri", "manset haberleri", "gündem haberleri", "asayiş haberleri",
+        "ekonomi haberleri", "spor haberleri", "dünya haberleri", "yerel haberler",
+        "kars haberleri", "ığdır haberleri", "ardahan haberleri", "mersin haberleri"
+    ]
+    if title_lower in generic_categories or (len(words) <= 4 and any(title_lower.endswith(gc) for gc in generic_categories)):
+        return True
+
+    if re.match(r'^(\d+\s+[A-Za-zÇĞİÖŞÜçğıöşü]+\s+\d{4}|\d+[\s.-]+\d+[\s.-]+\d+|\d{1,2}[:.]\d{2})+$', title_clean):
+        return True
+
+    return False
 
 class BaseAdapter:
     def __init__(self, source_id: str, source_name: str, category: str):
@@ -98,25 +139,7 @@ class BaseAdapter:
             return url
 
     def is_junk_title(self, title: str) -> bool:
-        if not title:
-            return True
-        title_clean = self.clean_text(title)
-        title_clean = re.sub(r'^\d{1,2}\s+[A-ZÇĞİÖŞÜa-zçğıöşü]+\s+\d{4}\s*\d{0,2}[:.]?\d{0,2}\s*[-–—]?\s*', '', title_clean)
-        title_clean = re.sub(r'^\d{1,2}[:.]\d{2}(:\d{2})?\s*[-–—]?\s*', '', title_clean).strip()
-        if len(title_clean) < 12:
-            return True
-        title_lower = title_clean.lower()
-        spam_kw = [
-            "sayısal loto", "süper loto", "on numara", "şans topu", "milli piyango",
-            "çekiliş sonuçları", "bilet sorgulama", "günlük burç", "burç yorumları",
-            "nöbetçi eczane", "çerez politikası", "gizlilik politikası", "künye",
-            "kurumsal satış", "bize ulaşın", "site haritası"
-        ]
-        if any(sk in title_lower for sk in spam_kw):
-            return True
-        if re.match(r'^(\d+\s+[A-Za-zÇĞİÖŞÜçğıöşü]+\s+\d{4}|\d+[\s.-]+\d+[\s.-]+\d+|\d{1,2}[:.]\d{2})+$', title.strip()):
-            return True
-        return False
+        return is_junk_title(title)
 
     def extract_explicit_date_from_title(self, title: str) -> str:
         if not title:

@@ -184,9 +184,14 @@ def run_media_monitoring_pipeline() -> dict:
             # Standardize date format in DB
             item["publish_date"] = pub_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-            # Deduplication checks
+            # Deduplication & Junk checks
             link = item.get("link", "")
             title = clean_leading_time(raw_title)
+            
+            from adapters.base_adapter import is_junk_title
+            if is_junk_title(title):
+                continue
+
             clean_title_str = "".join(ch for ch in title.lower() if ch.isalnum())
             
             if link in existing_links or clean_title_str in existing_titles:
