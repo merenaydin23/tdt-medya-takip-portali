@@ -43,6 +43,11 @@ KEYWORDS_STAGE_1 = [
     "gence", "gəncə", "terter", "barda", "lenkeran", "mingeçevir", "şemkir",
     "zengilan havalimanı", "fuzuli havalimanı", "laçın koridoru",
 
+    # Sınır & Bölgesel İller, Kapılar ve Hatlar (Iğdır, Kars, Ardahan, Dilucu, Sederek)
+    "dilucu", "dilucu sınır kapısı", "sederek", "sədərək", "çıldır-aktaş", "türkgözü",
+    "ığdır-nahçıvan", "kars-nahçıvan", "kars başkonsolosluğu", "azerbaycan kars başkonsolosluğu",
+    "mersin-kktc", "mersin kıbrıs", "girne", "gazimağusa", "güzelyurt", "iskele",
+
     # Kişi ve Lider İsimleri
     "ilham aliyev", "aliyev", "aliyev'in", "aliyev'den", "mehriban aliyeva",
     "haydar aliyev", "heydar aliyev", "ceyhun bayramov", "zakir hasanov", "reşad memmedov",
@@ -61,7 +66,7 @@ KEYWORDS_STAGE_1 = [
     "güney kafkasya", "kafkasya barış", "3+3 formatı",
     "bakü-tiflis-ceyhan", "btc boru hattı", "bakü-tiflis-kars", "btk demiryolu",
     "bir millet iki devlet", "can azerbaycan",
-    "azerbaycan büyükelçiliği", "azerbaycan konsolosluğu", "azerbaycan başkonsolosluğu", "kars başkonsolosluğu",
+    "azerbaycan büyükelçiliği", "azerbaycan konsolosluğu", "azerbaycan başkonsolosluğu",
     "azerbaycan dışişleri", "azerbaycan savunma bakanlığı", "azerbaycan milli meclisi", "azerbaycan ordusu",
     "azərbaycan respublikası", "milli məclis", "xarici işlər nazirliyi", "müdafiə nazirliyi",
     "қазақстан үкіметі", "kuzey kıbrıs türk cumhuriyeti", "kktc", "kuzey kıbrıs", "kıbrıs türk",
@@ -72,7 +77,7 @@ KEYWORDS_STAGE_1 = [
     "naxçıvan", "nahçıvan", "türk-azerbaycan", "azerbaycan-türkiye",
     "kazakistan", "kazakhstan", "қазақстан", "astana", "almaty", "almatı", "nursultan",
     "özbekistan", "uzbekistan", "o‘zbekistan", "taşkent", "tashkent",
-    "kırgızistan", "kyrgyzstan", "кыргызstan", "bişkek", "bishkek",
+    "kırgızistan", "kyrgyzstan", "кыргызстан", "bişkek", "bishkek",
     "türkmenistan", "turkmenistan", "aşgabat", "ashgabat",
     "lefkoşa", "nicosia", "kıbrıs", "cyprus", "northern cyprus", "doğu akdeniz",
 
@@ -89,7 +94,7 @@ KEYWORDS_STAGE_1 = [
 # Stage 2: Relevant Context Topics (for fallback to LLM classification)
 STAGE2_CONTEXT_TOPICS = [
     "dış politika", "dışişleri", "diplomasi", "savunma", "enerji", "doğalgaz", "boru hattı",
-    "kafkasya", "orta asya", "türk dünyası", "ermenistan", "gürcistan", "iran", "hazar denizi"
+    "kafkasya", "orta asya", "türk dünyası", "ermenistan", "gürcistan", "iran", "hazar denizi", "kıbrıs"
 ]
 
 # Source Categories
@@ -97,10 +102,11 @@ CATEGORIES = {
     "RESMI": "Resmi / Ana Akım",
     "IKTIDAR": "İktidar Yanlısı",
     "MUHALIF": "Muhalif",
+    "YEREL": "Yerel / Bölgesel Basın",
     "OTHER": "Diğer / Sınıflandırılmamış"
 }
 
-# 14 News Sources Metadata
+# 20+ News Sources Metadata
 SOURCES_CONFIG = [
     # 1. Resmi / Ana Akım
     {"id": "aa", "name": "Anadolu Ajansı (AA)", "category": CATEGORIES["RESMI"], "type": "scrape", "domain": "aa.com.tr"},
@@ -117,11 +123,17 @@ SOURCES_CONFIG = [
     {"id": "yenisafak", "name": "Yeni Şafak", "category": CATEGORIES["IKTIDAR"], "type": "rss/scrape", "domain": "yenisafak.com"},
     {"id": "sabah", "name": "Sabah", "category": CATEGORIES["IKTIDAR"], "type": "rss", "domain": "sabah.com.tr"},
     {"id": "turkiyegazetesi", "name": "Türkiye Gazetesi", "category": CATEGORIES["IKTIDAR"], "type": "rss/scrape", "domain": "turkiyegazetesi.com.tr"},
+    {"id": "yeniakit", "name": "Yeni Akit", "category": CATEGORIES["IKTIDAR"], "type": "rss/scrape", "domain": "yeniakit.com.tr"},
 
     # 3. Muhalif
     {"id": "sozcu", "name": "Sözcü", "category": CATEGORIES["MUHALIF"], "type": "rss/scrape", "domain": "sozcu.com.tr"},
     {"id": "cumhuriyet", "name": "Cumhuriyet", "category": CATEGORIES["MUHALIF"], "type": "rss", "domain": "cumhuriyet.com.tr"},
     {"id": "halktv", "name": "Halk TV", "category": CATEGORIES["MUHALIF"], "type": "rss/scrape", "domain": "halktv.com.tr"},
     {"id": "t24", "name": "T24", "category": CATEGORIES["MUHALIF"], "type": "rss", "domain": "t24.com.tr"},
-    {"id": "birgun", "name": "BirGün", "category": CATEGORIES["MUHALIF"], "type": "rss/scrape", "domain": "birgun.net"}
+    {"id": "birgun", "name": "BirGün", "category": CATEGORIES["MUHALIF"], "type": "rss/scrape", "domain": "birgun.net"},
+
+    # 4. Sınır, Yerel ve Bölgesel Basın
+    {"id": "regional_border", "name": "Sınır & Kafkas Basını (Iğdır/Kars/Ardahan/Ağrı)", "category": CATEGORIES["YEREL"], "type": "rss/scrape", "domain": "kha.com.tr"},
+    {"id": "kktc_mediterranean", "name": "KKTC & Akdeniz Basını (Mersin/Kıbrıs)", "category": CATEGORIES["YEREL"], "type": "rss/scrape", "domain": "kibrispostasi.com"},
+    {"id": "anatolian_local", "name": "Anadolu İlleri Yerel Basını", "category": CATEGORIES["YEREL"], "type": "rss/scrape", "domain": "olay.com.tr"}
 ]

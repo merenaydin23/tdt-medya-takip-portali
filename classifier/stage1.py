@@ -28,6 +28,7 @@ ASPECT_SECURITY = ["şuşa beyannamesi", "savunma", "askeri", "tatbikat", "ordu"
 ASPECT_ENERGY = ["tanap", "tap", "petkim", "socar", "boru hattı", "enerji", "şahdeniz", "şah deniz", "btc", "doğalgaz", "petrol", "gaz", "ticaret", "yatırım", "ekonomi"]
 ASPECT_TURKIC = ["türk devletleri teşkilatı", "tdt", "türk konverse", "türk konseyi", "türksoy", "turkpa", "orta asya", "türk dünyası"]
 ASPECT_DIPLOMACY = ["diplomasi", "siyaset", "büyükelçi", "büyükelçilik", "başkonsolosluk", "konsolos", "ziyaret", "görüşme", "zirve", "dışişleri", "ceyhun bayramov", "reşad memmedov", "milli meclis"]
+ASPECT_BORDER = ["dilucu", "sederek", "sədərək", "çıldır-aktaş", "türkgözü", "kars başkonsolosluğu", "azerbaycan kars başkonsolosluğu", "ığdır-nahçıvan", "kars-nahçıvan", "dilucu sınır kapısı"]
 ASPECT_SPORTS = [
     "futbol", "futbolcu", "maç", "maçı", "maçlar", "maçları", "gol", "şampiyonlar ligi", "devler ligi", "avrupa ligi",
     "konferans ligi", "karabağ fk", "sabah fk", "neftçi", "spor", "skoru", "maç özeti", "stadyum", "şampiyona", "puan durumu",
@@ -62,7 +63,7 @@ ASPECT_TURKMENISTAN = [
 ASPECT_KKTC = [
     "kuzey kıbrıs türk cumhuriyeti", "kktc", "kuzey kıbrıs", "kıbrıs türk", "lefkoşa", "ersin tatar", "ünal üstel",
     "northern cyprus", "turkish republic of northern cyprus", "nicosia", "türkiye-kktc", "azerbaycan-kktc",
-    "doğu akdeniz", "kıbrıs", "cyprus"
+    "doğu akdeniz", "kıbrıs", "cyprus", "mersin-kktc", "girne", "gazimağusa"
 ]
 
 ASPECT_ARMENIA_PATTERNS = [_compile_kw(k) for k in ASPECT_ARMENIA]
@@ -70,6 +71,7 @@ ASPECT_SECURITY_PATTERNS = [_compile_kw(k) for k in ASPECT_SECURITY]
 ASPECT_ENERGY_PATTERNS = [_compile_kw(k) for k in ASPECT_ENERGY]
 ASPECT_TURKIC_PATTERNS = [_compile_kw(k) for k in ASPECT_TURKIC]
 ASPECT_DIPLOMACY_PATTERNS = [_compile_kw(k) for k in ASPECT_DIPLOMACY]
+ASPECT_BORDER_PATTERNS = [_compile_kw(k) for k in ASPECT_BORDER]
 ASPECT_SPORTS_PATTERNS = [_compile_kw(k) for k in ASPECT_SPORTS]
 
 ASPECT_KAZAKHSTAN_PATTERNS = [_compile_kw(k) for k in ASPECT_KAZAKHSTAN]
@@ -165,6 +167,8 @@ def check_stage1_relevance(title: str, summary: str) -> dict:
                 aspect = "Enerji/Ekonomi"
             elif any(p.search(text_for_match) for p in ASPECT_TURKIC_PATTERNS):
                 aspect = "Türk Devletleri/Bölgesel"
+            elif any(p.search(text_for_match) for p in ASPECT_BORDER_PATTERNS):
+                aspect = "Sınır Hattı & Bölgesel Diplomasi"
             elif any(p.search(text_for_match) for p in ASPECT_DIPLOMACY_PATTERNS):
                 aspect = "Diplomasi & Siyaset"
             else:

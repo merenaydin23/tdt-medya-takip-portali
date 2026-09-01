@@ -16,6 +16,12 @@ from .cumhuriyet_adapter import CumhuriyetAdapter
 from .halktv_adapter import HalkTVAdapter
 from .t24_adapter import T24Adapter
 from .birgun_adapter import BirgunAdapter
+from .yeniakit_adapter import YeniAkitAdapter
+from .bloomberght_adapter import BloombergHTAdapter
+from .defensehere_adapter import DefenseHereAdapter
+from .regional_border_adapter import RegionalBorderAdapter
+from .kktc_mediterranean_adapter import KKTC_MediterraneanAdapter
+from .anatolian_local_adapter import AnatolianLocalAdapter
 
 ALL_ADAPTER_CLASSES = [
     AAAdapter,
@@ -34,5 +40,11 @@ ALL_ADAPTER_CLASSES = [
     CumhuriyetAdapter,
     HalkTVAdapter,
     T24Adapter,
-    BirgunAdapter
+    BirgunAdapter,
+    YeniAkitAdapter,
+    BloombergHTAdapter,
+    DefenseHereAdapter,
+    RegionalBorderAdapter,
+    KKTC_MediterraneanAdapter,
+    AnatolianLocalAdapter
 ]
