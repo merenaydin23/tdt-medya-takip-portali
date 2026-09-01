@@ -38,13 +38,12 @@ class TRTAdapter(BaseAdapter):
                     it["category"] = self.category
                     items.append(it)
 
-        if items:
-            return items
-
-        # Fallback Scraper
+        # Combine RSS with Direct HTML Category Scraping
         scrape_urls = [
             "https://www.trthaber.com/haber/gundem/",
-            "https://www.trthaber.com/haber/dunya/"
+            "https://www.trthaber.com/haber/dunya/",
+            "https://www.trthaber.com/haber/turkiye/",
+            "https://www.trthaber.com/haber/ekonomi/"
         ]
         for url in scrape_urls:
             html = self.fetch_url(url)

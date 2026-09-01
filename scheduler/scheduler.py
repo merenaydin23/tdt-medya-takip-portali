@@ -232,25 +232,26 @@ def run_media_monitoring_pipeline() -> dict:
             clean_today_items.append(it)
         items_to_process = clean_today_items
 
-        # Deduplicate by fuzzy content and title similarity (Jaccard index)
+        # Deduplicate within the same source by fuzzy content and title similarity (Jaccard index)
         conn = get_connection()
         cursor = conn.cursor()
         cutoff_date_str = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
-        cursor.execute("SELECT summary, title FROM news WHERE publish_date >= ?", (cutoff_date_str,))
+        cursor.execute("SELECT source_name, summary, title FROM news WHERE publish_date >= ?", (cutoff_date_str,))
         db_articles = cursor.fetchall()
         conn.close()
 
-        # Pre-calculate word sets for DB articles in the last 3 days
+        # Pre-calculate word sets for DB articles grouped by source
         db_word_sets = []
         for row in db_articles:
             db_t_set = _get_word_set(row["title"], min_len=4)
             db_b_set = _get_word_set(row["summary"], min_len=5)
-            db_word_sets.append((row["title"], db_t_set, db_b_set))
+            db_word_sets.append((row["source_name"], row["title"], db_t_set, db_b_set))
 
         deduped_items = []
         accepted_word_sets = []
 
         for item in items_to_process:
+            item_src = item.get("source_name", "")
             title_text = item.get("title") or ""
             summary_text = item.get("summary") or ""
             t_set = _get_word_set(title_text, min_len=4)
@@ -259,8 +260,10 @@ def run_media_monitoring_pipeline() -> dict:
             is_dup = False
             dup_reason = ""
 
-            # 1. Compare with DB articles (last 3 days) - with quick token pre-check
-            for db_title, db_t_set, db_b_set in db_word_sets:
+            # 1. Compare with DB articles for the SAME source
+            for db_src, db_title, db_t_set, db_b_set in db_word_sets:
+                if db_src != item_src:
+                    continue
                 # Quick skip if zero common words
                 if not (t_set & db_t_set or b_set & db_b_set):
                     continue
@@ -268,29 +271,31 @@ def run_media_monitoring_pipeline() -> dict:
                 t_sim = _jaccard_sim(t_set, db_t_set)
                 b_sim = _jaccard_sim(b_set, db_b_set) if (b_set and db_b_set) else 0.0
                 
-                if (t_sim > 0.50) or (b_sim > 0.55) or (t_sim > 0.25 and b_sim > 0.20):
+                if (t_sim > 0.60) or (b_sim > 0.65) or (t_sim > 0.35 and b_sim > 0.30):
                     is_dup = True
-                    dup_reason = f"DB article: '{db_title}' (T_Sim: {t_sim:.2f}, B_Sim: {b_sim:.2f})"
+                    dup_reason = f"DB article from {db_src}: '{db_title}'"
                     break
 
-            # 2. Compare with already accepted items in this run
+            # 2. Compare with already accepted items in this run for the SAME source
             if not is_dup:
-                for acc_title, acc_t_set, acc_b_set in accepted_word_sets:
+                for acc_src, acc_title, acc_t_set, acc_b_set in accepted_word_sets:
+                    if acc_src != item_src:
+                        continue
                     if not (t_set & acc_t_set or b_set & acc_b_set):
                         continue
 
                     t_sim = _jaccard_sim(t_set, acc_t_set)
                     b_sim = _jaccard_sim(b_set, acc_b_set) if (b_set and acc_b_set) else 0.0
                     
-                    if (t_sim > 0.50) or (b_sim > 0.55) or (t_sim > 0.25 and b_sim > 0.20):
+                    if (t_sim > 0.60) or (b_sim > 0.65) or (t_sim > 0.35 and b_sim > 0.30):
                         is_dup = True
-                        dup_reason = f"Run article: '{acc_title}' (T_Sim: {t_sim:.2f}, B_Sim: {b_sim:.2f})"
+                        dup_reason = f"Run article from {acc_src}: '{acc_title}'"
                         break
 
             if is_dup:
                 continue
 
-            accepted_word_sets.append((title_text, t_set, b_set))
+            accepted_word_sets.append((item_src, title_text, t_set, b_set))
             deduped_items.append(item)
 
         logger.info(f"Deduplication by content complete. Reduced {len(items_to_process)} articles to {len(deduped_items)}.")
