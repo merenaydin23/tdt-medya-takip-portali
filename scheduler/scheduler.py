@@ -157,17 +157,27 @@ def run_media_monitoring_pipeline() -> dict:
                 dt_obj = now_dt
             return dt_obj
 
-        # Retain articles from the last 3 days to account for timezone offsets and late night releases
-        cutoff_date = datetime.now() - timedelta(days=3)
+        # Strict Today Filter: Only retain articles published today (00:00:00 to now)
+        cutoff_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         relevant_articles_saved = []
 
         # Prepare deduplicated list for Stage 1 & Stage 2 processing
         items_to_process = []
         for item in raw_articles:
+            raw_title = item.get("title", "")
+            # Check if title has time prefix (e.g. "14:24 - ...")
+            import re
+            m_time = re.match(r'^([0-2]?\d)[:.]([0-5]\d)\s*[-–—:]?\s*', raw_title)
+            
             pub_date_str = item.get("publish_date", "")
             pub_dt = parse_publish_date(pub_date_str)
             
-            # Skip if older than 3 days
+            # If pub_dt has default time but title had specific time, apply it
+            if m_time and pub_dt.strftime("%H:%M:%S") == "00:00:00":
+                h, m = int(m_time.group(1)), int(m_time.group(2))
+                pub_dt = pub_dt.replace(hour=h, minute=m, second=0)
+
+            # Skip if older than today 00:00:00
             if pub_dt.replace(tzinfo=None) < cutoff_date.replace(tzinfo=None):
                 continue
 
@@ -176,7 +186,7 @@ def run_media_monitoring_pipeline() -> dict:
 
             # Deduplication checks
             link = item.get("link", "")
-            title = clean_leading_time(item.get("title", ""))
+            title = clean_leading_time(raw_title)
             clean_title_str = "".join(ch for ch in title.lower() if ch.isalnum())
             
             if link in existing_links or clean_title_str in existing_titles:
@@ -459,15 +469,15 @@ def trigger_manual_refresh():
     return thread
 
 def _scheduler_loop():
-    logger.info("Background scheduler initiated. Auto-scanning sources every 15 minutes.")
-    schedule.every(15).minutes.do(run_media_monitoring_pipeline)
+    logger.info("Background scheduler initiated. Auto-scanning sources every 3 minutes.")
+    schedule.every(3).minutes.do(run_media_monitoring_pipeline)
 
     while True:
         try:
             schedule.run_pending()
         except Exception as e:
             logger.error(f"Scheduler exception: {e}")
-        time.sleep(10)
+        time.sleep(5)
 
 def start_background_scheduler():
     """Starts the daily cron scheduler. Keep python run.py running for scans to continue."""

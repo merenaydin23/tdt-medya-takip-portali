@@ -106,8 +106,13 @@ def turkish_lower(s: str) -> str:
 def check_stage1_relevance(title: str, summary: str) -> dict:
     """
     Stage 1: Fast keyword matching with word boundaries (no substring false positives).
+    Matches ONLY in title and the lead paragraph (first 350 characters) to prevent
+    footer/related news widgets from causing false positives.
     """
-    text = f"{title or ''} {summary or ''}"
+    title_clean = title or ""
+    # Only take first 350 characters of summary to avoid bottom-of-page scraper noise
+    lead_summary = (summary or "")[:350]
+    text = f"{title_clean} {lead_summary}"
 
     # Filter out Turkish locality false friends (e.g. İzmir Karabağlar)
     text_for_match = text
@@ -132,7 +137,13 @@ def check_stage1_relevance(title: str, summary: str) -> dict:
                 "explanation": f"Zayıf anahtar kelime (LLM doğrulaması gerekli): {', '.join(matched_keywords[:3])}"
             }
 
-        # Fine-grained Aspect Detection
+        # Check if it is a general TDT / Türk Dünyası news
+        is_tdt_general = any(p.search(text_for_match) for p in ASPECT_TURKIC_PATTERNS) or any(
+            k in ("türk devletleri teşkilatı", "tdt", "türk konseyi", "türksoy", "turkpa", "türk dünyası", "orta koridor", "middle corridor") 
+            for k in matched_keywords
+        )
+
+        # Fine-grained Country & Aspect Detection
         aspects = []
         if any(p.search(text_for_match) for p in ASPECT_KAZAKHSTAN_PATTERNS):
             aspects.append("Kazakistan")
@@ -142,35 +153,47 @@ def check_stage1_relevance(title: str, summary: str) -> dict:
             aspects.append("Özbekistan")
         if any(p.search(text_for_match) for p in ASPECT_TURKMENISTAN_PATTERNS):
             aspects.append("Türkmenistan")
-        if any(p.search(text_for_match) for p in ASPECT_KKTC_PATTERNS):
-            aspects.append("KKTC")
 
-        # Check if Azerbaijan is also in the text (either by name or strong local keywords)
-        is_az_related = any(turkish_lower(k) in ("azerbaycan", "aliyev", "baku", "bakü") for k in matched_keywords) or any(
+        # Check if Azerbaijan / Armenia corridor / Nakhchivan / Karabakh is in the text
+        is_armenia_corridor = any(p.search(text_for_match) for p in ASPECT_ARMENIA_PATTERNS) or any(
+            k in ("ermenistan-azerbaycan", "azerbaycan-ermenistan", "paşinyan", "karabağ", "dağlık karabağ", "zangezur", "zengezur", "şuşa", "hankendi", "laçın", "hocalı")
+            for k in matched_keywords
+        )
+        is_border_nahcivan = any(p.search(text_for_match) for p in ASPECT_BORDER_PATTERNS) or any(
+            k in ("nahçıvan", "naxçıvan", "dilucu", "sederek", "kars başkonsolosluğu")
+            for k in matched_keywords
+        )
+        is_az_related = is_armenia_corridor or is_border_nahcivan or any(
+            turkish_lower(k) in ("azerbaycan", "aliyev", "baku", "bakü", "socar", "tanap", "şahdeniz") for k in matched_keywords
+        ) or any(
             x in turkish_lower(text_for_match) for x in ["azerbaycan", "aliyev", "bakü", "baku", "gence", "səfirliyi", "büyükelçiliği"]
         )
 
-        if aspects:
-            # If it relates to both Azerbaijan and other country(ies)
+        if is_tdt_general:
+            # TDT news covers all member states
+            aspect = "TDT / Türk Dünyası (Azerbaycan, Kazakistan, Kırgızistan, Özbekistan, Türkmenistan)"
+        elif aspects:
             if is_az_related:
                 aspects.insert(0, "Azerbaycan")
             aspect = ", ".join(aspects)
+        elif is_armenia_corridor:
+            aspect = "Azerbaycan, Ermenistan Hattı"
+        elif is_border_nahcivan:
+            aspect = "Azerbaycan, Sınır Hattı & Bölgesel Diplomasi"
+        elif is_az_related:
+            if any(p.search(text_for_match) for p in ASPECT_SPORTS_PATTERNS):
+                aspect = "Azerbaycan, Spor"
+            elif any(p.search(text_for_match) for p in ASPECT_SECURITY_PATTERNS):
+                aspect = "Azerbaycan, Güvenlik/Savunma"
+            elif any(p.search(text_for_match) for p in ASPECT_ENERGY_PATTERNS):
+                aspect = "Azerbaycan, Enerji/Ekonomi"
+            else:
+                aspect = "Azerbaycan, Diplomasi & Siyaset"
         else:
-            # Check other categories if no other specific countries matched
-            if any(p.search(text_for_match) for p in ASPECT_ARMENIA_PATTERNS) or any(k in ("ermenistan-azerbaycan", "azerbaycan-ermenistan", "paşinyan", "karabağ", "dağlık karabağ", "zangezur", "zengezur") for k in matched_keywords):
-                aspect = "Ermenistan Hattı"
-            elif any(p.search(text_for_match) for p in ASPECT_SPORTS_PATTERNS):
-                aspect = "Spor"
+            if any(p.search(text_for_match) for p in ASPECT_ENERGY_PATTERNS):
+                aspect = "Enerji/Ekonomi"
             elif any(p.search(text_for_match) for p in ASPECT_SECURITY_PATTERNS):
                 aspect = "Güvenlik/Savunma"
-            elif any(p.search(text_for_match) for p in ASPECT_ENERGY_PATTERNS):
-                aspect = "Enerji/Ekonomi"
-            elif any(p.search(text_for_match) for p in ASPECT_TURKIC_PATTERNS):
-                aspect = "Türk Devletleri/Bölgesel"
-            elif any(p.search(text_for_match) for p in ASPECT_BORDER_PATTERNS):
-                aspect = "Sınır Hattı & Bölgesel Diplomasi"
-            elif any(p.search(text_for_match) for p in ASPECT_DIPLOMACY_PATTERNS):
-                aspect = "Diplomasi & Siyaset"
             else:
                 aspect = "Diplomasi & Siyaset"
 
@@ -179,7 +202,7 @@ def check_stage1_relevance(title: str, summary: str) -> dict:
             "stage": "Stage 1 (Anahtar Kelime)",
             "aspect": aspect,
             "matched_keywords": matched_keywords[:5],
-            "explanation": f"Metinde doğrudan anahtar kelime eşleşmesi bulundu: {', '.join(matched_keywords[:3])}"
+            "explanation": f"Başlık ve ana metinde tespit edildi: {', '.join(matched_keywords[:3])}"
         }
 
     is_candidate_for_stage2 = any(p.search(text) for p, _ in STAGE2_CONTEXT_PATTERNS)
