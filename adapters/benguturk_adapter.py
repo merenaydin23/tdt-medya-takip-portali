@@ -72,6 +72,24 @@ class BenguturkAdapter(BaseAdapter):
                         if any(c == href.rstrip("/") for c in category_urls):
                             continue
                         
+                        # Check publication date from article page
+                        art_pub_date = None
+                        try:
+                            art_res = self.fetch_url(href, timeout=2.0)
+                            if art_res:
+                                art_soup = BeautifulSoup(art_res, "html.parser")
+                                from .base_adapter import extract_pub_date_from_html
+                                art_pub_date = extract_pub_date_from_html(art_soup)
+                        except:
+                            pass
+
+                        if not art_pub_date:
+                            continue
+
+                        today_prefix = datetime.now().strftime("%Y-%m-%d")
+                        if not art_pub_date.startswith(today_prefix):
+                            continue
+
                         seen_links.add(href)
                         items.append({
                             "source_id": self.source_id,
@@ -80,7 +98,7 @@ class BenguturkAdapter(BaseAdapter):
                             "title": title,
                             "summary": "",
                             "author": "Bengütürk TV",
-                            "publish_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "publish_date": art_pub_date,
                             "link": href,
                             "scraped_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             "veri_kaynagi": "Scraping"

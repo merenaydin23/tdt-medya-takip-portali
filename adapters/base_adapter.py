@@ -326,6 +326,9 @@ def extract_pub_date_from_html(soup: BeautifulSoup) -> str:
     meta_pub = (
         soup.find("meta", property="article:published_time") or
         soup.find("meta", attrs={"name": "article:published_time"}) or
+        soup.find("meta", attrs={"name": "datePublished"}) or
+        soup.find("meta", attrs={"name": "datepublished"}) or
+        soup.find("meta", attrs={"itemprop": "datePublished"}) or
         soup.find("meta", property="og:published_time") or
         soup.find("meta", attrs={"name": "publish-date"}) or
         soup.find("meta", attrs={"name": "publication_date"}) or
