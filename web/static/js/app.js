@@ -34,9 +34,30 @@ function setFilter(mode) {
 }
 
 function changeDate(selectedDate) {
+    if (!selectedDate) return;
     const url = new URL(window.location.href);
     url.searchParams.set("date", selectedDate);
     window.location.href = url.toString();
+}
+
+function handleDateSelectChange(val) {
+    if (val === "open_archive_modal") {
+        openArchiveModal();
+    } else {
+        changeDate(val);
+    }
+}
+
+function openArchiveModal() {
+    const modal = document.getElementById("archiveModal");
+    if (modal) modal.style.display = "flex";
+}
+
+function closeArchiveModal(event) {
+    if (!event || event.target.id === "archiveModal" || event.target.classList.contains("modal-close-btn")) {
+        const modal = document.getElementById("archiveModal");
+        if (modal) modal.style.display = "none";
+    }
 }
 
 // Global active source filters & search query tracking

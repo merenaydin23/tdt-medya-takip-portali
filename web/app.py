@@ -330,10 +330,16 @@ def create_app():
 
         named_total = len(all_news)
 
-        summary = get_daily_summary(selected_date)
-        available_dates = get_available_dates()
-        if today_str not in available_dates:
-            available_dates.insert(0, today_str)
+        all_available_dates = get_available_dates()
+        if today_str not in all_available_dates:
+            all_available_dates.insert(0, today_str)
+
+        # Quick 3 Days List
+        quick_dates = all_available_dates[:3]
+        if selected_date not in quick_dates and selected_date in all_available_dates:
+            quick_dates.append(selected_date)
+
+        archive_dates = [d for d in all_available_dates if d not in quick_dates]
 
         pipeline_status = get_pipeline_status()
 
@@ -341,7 +347,9 @@ def create_app():
             "index.html",
             selected_date=selected_date,
             today_str=today_str,
-            available_dates=available_dates,
+            available_dates=quick_dates,
+            all_available_dates=all_available_dates,
+            archive_dates=archive_dates,
             filter_mode=filter_mode,
             news_items=all_news,
             news_groups=news_groups,

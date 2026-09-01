@@ -68,16 +68,19 @@
                     </button>
                 </div>
 
-                <!-- Tarih Seçici -->
+                <!-- Tarih Seçici (Son 3 Gün Hızlı Liste) -->
                 <div class="date-selector-wrapper">
                     <label for="dateSelect" class="date-label">{{ t.date_label }}</label>
-                    <select id="dateSelect" class="date-select" onchange="changeDate(this.value)">
+                    <select id="dateSelect" class="date-select" onchange="handleDateSelectChange(this.value)">
                         {% for dt in available_dates %}
                             <option value="{{ dt }}" {% if dt == selected_date %}selected{% endif %}>
                                 {{ dt }} {% if dt == today_str and lang == 'tr' %}(Bugün){% elif dt == today_str and lang == 'az' %}(Bu gün){% endif %}
                             </option>
                         {% endfor %}
                     </select>
+                    <button class="btn btn-archive" onclick="openArchiveModal()" title="Tüm Geçmiş Tarihler Arşivi">
+                        <span>📅 Arşiv</span>
+                    </button>
                 </div>
 
                 <!-- Yenile Butonu -->
@@ -255,6 +258,33 @@
             </div>
         </div>
     </footer>
+
+    <!-- Geçmiş Tarih Arşivi Modalı -->
+    <div id="archiveModal" class="modal-overlay" style="display: none;" onclick="closeArchiveModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>📅 Geçmiş Tarih Arşivi</h3>
+                <button class="modal-close-btn" onclick="closeArchiveModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc">Veritabanında kayıtlı tüm geçmiş günlerin haber arşivine buradan ulaşabilirsiniz:</p>
+                <div class="custom-date-picker">
+                    <label for="customDateInput">Tarihe Git:</label>
+                    <input type="date" id="customDateInput" class="custom-date-input" value="{{ selected_date }}">
+                    <button class="btn btn-primary" onclick="changeDate(document.getElementById('customDateInput').value)">Seçilen Güne Git</button>
+                </div>
+                <hr class="modal-divider">
+                <h4 style="font-size: 13px; color: #475569; margin-bottom: 8px;">Kayıtlı Tüm Tarihler:</h4>
+                <div class="archive-dates-grid">
+                    {% for dt in all_available_dates %}
+                        <a href="javascript:void(0)" onclick="changeDate('{{ dt }}')" class="archive-date-pill {% if dt == selected_date %}active{% endif %}">
+                            {{ dt }} {% if dt == today_str %}(Bugün){% endif %}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
