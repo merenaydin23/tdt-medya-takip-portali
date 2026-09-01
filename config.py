@@ -39,9 +39,9 @@ KEYWORDS_STAGE_1 = [
     "nahçıvan", "nahçivan", "nahcivan", "nahçıvan'a", "nahçıvan'da", "naxçıvan",
     "karabağ", "dağlık karabağ", "karabağ'da", "karabağ'ın", "karabağ'a",
     "şuşa", "şuşa'da", "şuşa'ya", "şuşa beyannamesi",
-    "hankendi", "hocalı", "kelbecer", "laçın", "ağdam", "cebrayıl", "fuzuli", "zengilan", "gubadlı",
+    "hankendi", "hocalı", "kelbecer", "laçın", "ağdam", "cebrayıl", "Fuzuli", "zengilan", "gubadlı",
     "gence", "gəncə", "terter", "barda", "lenkeran", "mingeçevir", "şemkir",
-    "zengilan havalimanı", "fuzuli havalimanı", "laçın koridoru",
+    "zengilan havalimanı", "fuzuli havalimanı", "fuzuli kenti", "laçın koridoru",
 
     # Sınır & Bölgesel İller, Kapılar ve Hatlar (Iğdır, Kars, Ardahan, Dilucu, Sederek)
     "dilucu", "dilucu sınır kapısı", "sederek", "sədərək", "çıldır-aktaş", "türkgözü",

@@ -7,7 +7,7 @@ WEAK_KEYWORDS = {"tap", "btc"}
 # Strong keywords: direct markers (substring OK only with word boundaries)
 def _compile_kw(kw: str):
     k_lower = kw.lower()
-    if k_lower in ("bakı", "barda", "gence", "laçın", "laçin"):
+    if k_lower in ("bakı", "barda", "gence", "laçın", "laçin", "fuzuli", "ağdam", "terter"):
         cap_kw = kw[0].upper() + kw[1:]
         return re.compile(rf"(?<![\wçğıöşüÇĞİÖŞÜ]){cap_kw}(?![\wçğıöşüÇĞİÖŞÜ])")
     return re.compile(rf"(?<![\wçğıöşüÇĞİÖŞÜ]){re.escape(kw)}(?![\wçğıöşüÇĞİÖŞÜ])", re.IGNORECASE)
@@ -20,7 +20,8 @@ ASPECT_AZERBAIJAN = [
     "azerbaycan", "azerbaycan'ın", "azerbaycan'a", "azerbaycan'da", "azerbaycan'dan", "azerbaycanlı", "azerbaycanlılar",
     "azərbaycan", "azerbaijan", "ilham aliyev", "aliyev", "mehriban aliyeva", "bakü", "baku", "bakı",
     "karabağ", "qarabağ", "şuşa", "hankendi", "xankəndi", "laçın", "kelbecer", "ağdam", "hocalı", "cebrayıl",
-    "fuzuli", "zengilan", "gence", "socar", "tanap", "şahdeniz", "zengezur", "zangezur", "nahçıvan", "naxçıvan",
+    "fuzuli havalimanı", "fuzuli kenti", "fuzuli şehri", "fuzuli reyonu", "füzuli", "Fuzuli",
+    "zengilan", "gence", "socar", "tanap", "şahdeniz", "zengezur", "zangezur", "nahçıvan", "naxçıvan",
     "dilucu", "kars başkonsolosluğu", "ceyhun bayramov", "zakir hasanov", "reşad memmedov", "azeri"
 ]
 
@@ -108,7 +109,11 @@ FALSE_FRIEND_PATTERNS = [
     _compile_kw("karabağ köyü"),
     re.compile(r"\b(?:yerdeki|talihsiz|yaralı|genç|kavga|şiddet|video|haber)\s+gence\b", re.IGNORECASE),
     re.compile(r"\bgence\s+(?:saldırdı|tekmeler|bağırdı|vurdu|dehşet|dayak|kavga)\b", re.IGNORECASE),
+    # Turkish noun case homonym phrases ("bar-da" / in the bar ≠ Barda city)
     re.compile(r"\bbarda\s+(?:kavga|dehşet|olay|cinayet|silahlı|eğlenen|tartışma)\b", re.IGNORECASE),
+    # Turkish adjective homonyms ("fuzuli yere" / "fuzuli olur" / "fuzuli masraf" ≠ Fuzuli city)
+    re.compile(r"\bfuzuli\s+(?:olur|yere|masraf|masraflar|işgal|harcama|iş|bir|gör|görüldü|sayıldı|olarak)\b", re.IGNORECASE),
+    re.compile(r"\b(?:faydasız|gereksiz|yersiz|boş|anlamsız)\s+ve\s+fuzuli\b", re.IGNORECASE),
 ]
 
 def turkish_lower(s: str) -> str:
