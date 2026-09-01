@@ -12,15 +12,27 @@ class AAAdapter(BaseAdapter):
         )
 
     def fetch_latest_news(self) -> list:
-        # AA provides RSS feeds for general and world categories, fallback to HTML scraping if RSS fails
         rss_urls = [
             "https://www.aa.com.tr/tr/rss/default?cat=guncel",
-            "https://www.aa.com.tr/tr/rss/default?cat=dunya"
+            "https://www.aa.com.tr/tr/rss/default?cat=dunya",
+            "https://www.aa.com.tr/tr/rss/default?cat=politika",
+            "https://www.aa.com.tr/tr/rss/default?cat=ekonomi",
+            "https://www.aa.com.tr/tr/rss/default?cat=analiz",
+            "https://www.aa.com.tr/tr/rss/default?cat=spor",
+            "https://news.google.com/rss/search?q=site:aa.com.tr&hl=tr&gl=TR&ceid=TR:tr"
         ]
         items = []
+        seen_links = set()
         for url in rss_urls:
-            rss_items = self.parse_rss_feed(url)
-            items.extend(rss_items)
+            rss_items = self.parse_rss_feed(url, max_items=100)
+            for it in rss_items:
+                link = it.get("link", "")
+                if link and link not in seen_links:
+                    seen_links.add(link)
+                    it["source_id"] = self.source_id
+                    it["source_name"] = self.source_name
+                    it["category"] = self.category
+                    items.append(it)
 
         if items:
             return items
