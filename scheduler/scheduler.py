@@ -223,6 +223,15 @@ def run_media_monitoring_pipeline() -> dict:
             with ThreadPoolExecutor(max_workers=12) as executor:
                 list(executor.map(_scrape_worker, needed_body_scrape))
 
+        # Strict Second-Pass Cutoff: Drop any articles whose scraped date is older than today 00:00:00
+        clean_today_items = []
+        for it in items_to_process:
+            pub_dt = parse_publish_date(it.get("publish_date", ""))
+            if pub_dt.replace(tzinfo=None) < cutoff_date.replace(tzinfo=None):
+                continue
+            clean_today_items.append(it)
+        items_to_process = clean_today_items
+
         # Deduplicate by fuzzy content and title similarity (Jaccard index)
         conn = get_connection()
         cursor = conn.cursor()

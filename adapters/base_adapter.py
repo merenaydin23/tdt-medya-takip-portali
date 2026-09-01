@@ -287,6 +287,40 @@ def parse_date_string(date_str: str) -> datetime:
     return None
 
 
+def extract_turkish_date_from_text(text: str) -> datetime:
+    if not text:
+        return None
+    month_map = {
+        "ocak": 1, "şubat": 2, "subat": 2, "mart": 3, "nisan": 4, "mayıs": 5, "mayis": 5, "haziran": 6,
+        "temmuz": 7, "ağustos": 8, "agustos": 8, "eylül": 9, "eylul": 9, "ekim": 10, "kasım": 11, "kasim": 11, "aralık": 12, "aralik": 12
+    }
+    # Pattern 1: 31 Ağustos 2026 22:12 or 31 Ağustos 2026
+    m = re.search(r'\b([0-3]?\d)\s+(Ocak|Şubat|Subat|Mart|Nisan|Mayıs|Mayis|Haziran|Temmuz|Ağustos|Agustos|Eylül|Eylul|Ekim|Kasım|Kasim|Aralık|Aralik)\s+(\d{4})(?:\s+([0-2]?\d)[:.]([0-5]\d))?\b', text, re.IGNORECASE)
+    if m:
+        day = int(m.group(1))
+        month = month_map.get(m.group(2).lower(), 1)
+        year = int(m.group(3))
+        hour = int(m.group(4)) if m.group(4) else 12
+        minute = int(m.group(5)) if m.group(5) else 0
+        try:
+            return datetime(year, month, day, hour, minute)
+        except:
+            pass
+
+    # Pattern 2: 31.08.2026 22:12 or 31/08/2026 or 31-08-2026
+    m2 = re.search(r'\b([0-3]?\d)[./-]([0-1]?\d)[./-](\d{4})(?:\s+([0-2]?\d)[:.]([0-5]\d))?\b', text)
+    if m2:
+        day = int(m2.group(1))
+        month = int(m2.group(2))
+        year = int(m2.group(3))
+        hour = int(m2.group(4)) if m2.group(4) else 12
+        minute = int(m2.group(5)) if m2.group(5) else 0
+        try:
+            return datetime(year, month, day, hour, minute)
+        except:
+            pass
+    return None
+
 def extract_pub_date_from_html(soup: BeautifulSoup) -> str:
     # 1. Check article:published_time and standard metas
     meta_pub = (
@@ -330,6 +364,26 @@ def extract_pub_date_from_html(soup: BeautifulSoup) -> str:
             parsed_dt = parse_date_string(dt_str)
             if parsed_dt:
                 return parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
+        # Also check inner text of time tag
+        t_text = time_tag.get_text()
+        parsed_t = extract_turkish_date_from_text(t_text)
+        if parsed_t:
+            return parsed_t.strftime("%Y-%m-%d %H:%M:%S")
+
+    # 4. Check date classes in local newspapers (e.g. .date, .tarih, .news-date, .published)
+    for selector in [".date", ".tarih", ".news-date", ".post-date", ".entry-date", ".haber-tarih", ".time", ".info-date", ".detay-tarih"]:
+        for el in soup.select(selector):
+            parsed_t = extract_turkish_date_from_text(el.get_text())
+            if parsed_t:
+                return parsed_t.strftime("%Y-%m-%d %H:%M:%S")
+
+    # 5. Check first 1000 characters of whole body text for Turkish date pattern
+    body_el = soup.find("body")
+    if body_el:
+        lead_text = body_el.get_text()[:1500]
+        parsed_t = extract_turkish_date_from_text(lead_text)
+        if parsed_t:
+            return parsed_t.strftime("%Y-%m-%d %H:%M:%S")
 
     return None
 
