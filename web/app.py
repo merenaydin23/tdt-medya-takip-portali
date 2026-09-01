@@ -168,6 +168,10 @@ MEDIA_OUTLET_CATEGORIES = {
     "diriliş postası": "İktidar Yanlısı",
     "türkgün": "İktidar Yanlısı",
     "superhaber": "İktidar Yanlısı",
+    "bengütürk tv": "İktidar Yanlısı",
+    "bengütürk": "İktidar Yanlısı",
+    "benguturk.com": "İktidar Yanlısı",
+    "bengü türk": "İktidar Yanlısı",
 
     # Muhalif
     "sözcü": "Muhalif",

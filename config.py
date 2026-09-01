@@ -124,6 +124,7 @@ SOURCES_CONFIG = [
     {"id": "sabah", "name": "Sabah", "category": CATEGORIES["IKTIDAR"], "type": "rss", "domain": "sabah.com.tr"},
     {"id": "turkiyegazetesi", "name": "Türkiye Gazetesi", "category": CATEGORIES["IKTIDAR"], "type": "rss/scrape", "domain": "turkiyegazetesi.com.tr"},
     {"id": "yeniakit", "name": "Yeni Akit", "category": CATEGORIES["IKTIDAR"], "type": "rss/scrape", "domain": "yeniakit.com.tr"},
+    {"id": "benguturk", "name": "Bengütürk TV", "category": CATEGORIES["IKTIDAR"], "type": "rss/scrape", "domain": "benguturk.com"},
 
     # 3. Muhalif
     {"id": "sozcu", "name": "Sözcü", "category": CATEGORIES["MUHALIF"], "type": "rss/scrape", "domain": "sozcu.com.tr"},

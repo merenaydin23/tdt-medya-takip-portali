@@ -22,6 +22,7 @@ from .defensehere_adapter import DefenseHereAdapter
 from .regional_border_adapter import RegionalBorderAdapter
 from .kktc_mediterranean_adapter import MediterraneanLocalAdapter
 from .anatolian_local_adapter import AnatolianLocalAdapter
+from .benguturk_adapter import BenguturkAdapter
 
 ALL_ADAPTER_CLASSES = [
     AAAdapter,
@@ -44,6 +45,7 @@ ALL_ADAPTER_CLASSES = [
     YeniAkitAdapter,
     BloombergHTAdapter,
     DefenseHereAdapter,
+    BenguturkAdapter,
     RegionalBorderAdapter,
     MediterraneanLocalAdapter,
     AnatolianLocalAdapter
