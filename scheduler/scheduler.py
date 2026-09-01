@@ -188,15 +188,16 @@ def run_media_monitoring_pipeline() -> dict:
 
             items_to_process.append(item)
 
-        # Parallel scraping of full article body texts for all items to process
-        if items_to_process:
+        # Smart parallel scraping of full article body texts ONLY when summary is missing
+        needed_body_scrape = [item for item in items_to_process if not item.get("summary") or len(item.get("summary", "").strip()) < 50]
+        if needed_body_scrape:
             from adapters.base_adapter import scrape_article_text
-            logger.info(f"Scraping full article content for {len(items_to_process)} new articles...")
+            logger.info(f"Fast scraping full content for {len(needed_body_scrape)} articles with missing summary...")
             
             def _scrape_worker(item):
                 link = item.get("link")
                 if link:
-                    res = scrape_article_text(link)
+                    res = scrape_article_text(link, timeout=2.0)
                     if res:
                         if res.get("text"):
                             item["summary"] = res["text"]
@@ -204,70 +205,72 @@ def run_media_monitoring_pipeline() -> dict:
                             pub_dt = parse_publish_date(res["publish_date"])
                             item["publish_date"] = pub_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-            with ThreadPoolExecutor(max_workers=16) as executor:
-                list(executor.map(_scrape_worker, items_to_process))
+            with ThreadPoolExecutor(max_workers=12) as executor:
+                list(executor.map(_scrape_worker, needed_body_scrape))
 
-            # Deduplicate by fuzzy content and title similarity (Jaccard index)
-            conn = get_connection()
-            cursor = conn.cursor()
-            cutoff_date_str = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
-            cursor.execute("SELECT summary, title FROM news WHERE publish_date >= ?", (cutoff_date_str,))
-            db_articles = cursor.fetchall()
-            conn.close()
+        # Deduplicate by fuzzy content and title similarity (Jaccard index)
+        conn = get_connection()
+        cursor = conn.cursor()
+        cutoff_date_str = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("SELECT summary, title FROM news WHERE publish_date >= ?", (cutoff_date_str,))
+        db_articles = cursor.fetchall()
+        conn.close()
 
-            # Pre-calculate word sets for DB articles in the last 3 days
-            db_word_sets = []
-            for row in db_articles:
-                db_t_set = _get_word_set(row["title"], min_len=4)
-                db_b_set = _get_word_set(row["summary"], min_len=5)
-                db_word_sets.append((row["title"], db_t_set, db_b_set))
+        # Pre-calculate word sets for DB articles in the last 3 days
+        db_word_sets = []
+        for row in db_articles:
+            db_t_set = _get_word_set(row["title"], min_len=4)
+            db_b_set = _get_word_set(row["summary"], min_len=5)
+            db_word_sets.append((row["title"], db_t_set, db_b_set))
 
-            deduped_items = []
-            accepted_word_sets = []
+        deduped_items = []
+        accepted_word_sets = []
 
-            for item in items_to_process:
-                title_text = item.get("title") or ""
-                summary_text = item.get("summary") or ""
-                t_set = _get_word_set(title_text, min_len=4)
-                b_set = _get_word_set(summary_text, min_len=5)
+        for item in items_to_process:
+            title_text = item.get("title") or ""
+            summary_text = item.get("summary") or ""
+            t_set = _get_word_set(title_text, min_len=4)
+            b_set = _get_word_set(summary_text, min_len=5)
 
-                is_dup = False
-                dup_reason = ""
+            is_dup = False
+            dup_reason = ""
 
-                # 1. Compare with DB articles (last 3 days)
-                for db_title, db_t_set, db_b_set in db_word_sets:
-                    t_sim = _jaccard_sim(t_set, db_t_set)
-                    b_sim = _jaccard_sim(b_set, db_b_set)
-                    
-                    # Smart duplicate criteria
-                    # - If titles match > 50%
-                    # - If bodies match > 55%
-                    # - If both have significant overlap (title > 25% and body > 20%)
-                    if (t_sim > 0.50) or (b_sim > 0.55) or (t_sim > 0.25 and b_sim > 0.20):
-                        is_dup = True
-                        dup_reason = f"DB article: '{db_title}' (T_Sim: {t_sim:.2f}, B_Sim: {b_sim:.2f})"
-                        break
-
-                # 2. Compare with already accepted items in this run
-                if not is_dup:
-                    for acc_title, acc_t_set, acc_b_set in accepted_word_sets:
-                        t_sim = _jaccard_sim(t_set, acc_t_set)
-                        b_sim = _jaccard_sim(b_set, acc_b_set)
-                        
-                        if (t_sim > 0.50) or (b_sim > 0.55) or (t_sim > 0.25 and b_sim > 0.20):
-                            is_dup = True
-                            dup_reason = f"Run article: '{acc_title}' (T_Sim: {t_sim:.2f}, B_Sim: {b_sim:.2f})"
-                            break
-
-                if is_dup:
-                    logger.info(f"Skipping duplicate article by fuzzy similarity: '{title_text}' -> matched with {dup_reason}")
+            # 1. Compare with DB articles (last 3 days) - with quick token pre-check
+            for db_title, db_t_set, db_b_set in db_word_sets:
+                # Quick skip if zero common words
+                if not (t_set & db_t_set or b_set & db_b_set):
                     continue
 
-                accepted_word_sets.append((title_text, t_set, b_set))
-                deduped_items.append(item)
+                t_sim = _jaccard_sim(t_set, db_t_set)
+                b_sim = _jaccard_sim(b_set, db_b_set) if (b_set and db_b_set) else 0.0
+                
+                if (t_sim > 0.50) or (b_sim > 0.55) or (t_sim > 0.25 and b_sim > 0.20):
+                    is_dup = True
+                    dup_reason = f"DB article: '{db_title}' (T_Sim: {t_sim:.2f}, B_Sim: {b_sim:.2f})"
+                    break
 
-            logger.info(f"Deduplication by content complete. Reduced {len(items_to_process)} articles to {len(deduped_items)}.")
-            items_to_process = deduped_items
+            # 2. Compare with already accepted items in this run
+            if not is_dup:
+                for acc_title, acc_t_set, acc_b_set in accepted_word_sets:
+                    if not (t_set & acc_t_set or b_set & acc_b_set):
+                        continue
+
+                    t_sim = _jaccard_sim(t_set, acc_t_set)
+                    b_sim = _jaccard_sim(b_set, acc_b_set) if (b_set and acc_b_set) else 0.0
+                    
+                    if (t_sim > 0.50) or (b_sim > 0.55) or (t_sim > 0.25 and b_sim > 0.20):
+                        is_dup = True
+                        dup_reason = f"Run article: '{acc_title}' (T_Sim: {t_sim:.2f}, B_Sim: {b_sim:.2f})"
+                        break
+
+            if is_dup:
+                continue
+
+            accepted_word_sets.append((title_text, t_set, b_set))
+            deduped_items.append(item)
+
+        logger.info(f"Deduplication by content complete. Reduced {len(items_to_process)} articles to {len(deduped_items)}.")
+        items_to_process = deduped_items
 
 
         # Stage 1 keyword matching
@@ -456,16 +459,15 @@ def trigger_manual_refresh():
     return thread
 
 def _scheduler_loop():
-    logger.info("Background scheduler initiated. Auto-scanning sources every 1 minute.")
-    # Run immediate scan on startup, then every 1 minute
-    schedule.every(1).minutes.do(run_media_monitoring_pipeline)
+    logger.info("Background scheduler initiated. Auto-scanning sources every 15 minutes.")
+    schedule.every(15).minutes.do(run_media_monitoring_pipeline)
 
     while True:
         try:
             schedule.run_pending()
         except Exception as e:
             logger.error(f"Scheduler exception: {e}")
-        time.sleep(5)
+        time.sleep(10)
 
 def start_background_scheduler():
     """Starts the daily cron scheduler. Keep python run.py running for scans to continue."""

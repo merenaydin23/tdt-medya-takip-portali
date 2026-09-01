@@ -1,10 +1,19 @@
 import logging
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 from datetime import datetime
 import re
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
+# Global high-performance HTTP session with connection pooling
+_SESSION = requests.Session()
+_retries = Retry(total=1, backoff_factor=0.2, status_forcelist=[500, 502, 503, 504])
+_adapter = HTTPAdapter(pool_connections=100, pool_maxsize=100, max_retries=_retries)
+_SESSION.mount('http://', _adapter)
+_SESSION.mount('https://', _adapter)
 
 class BaseAdapter:
     def __init__(self, source_id: str, source_name: str, category: str):
@@ -19,17 +28,15 @@ class BaseAdapter:
             "Referer": "https://www.google.com/"
         }
 
-    def fetch_url(self, url: str, timeout: int = 6) -> str:
+    def fetch_url(self, url: str, timeout: float = 3.5) -> str:
         try:
-            response = requests.get(url, headers=self.headers, timeout=timeout)
+            response = _SESSION.get(url, headers=self.headers, timeout=timeout)
             if response.status_code == 200:
                 response.encoding = response.apparent_encoding or "utf-8"
                 return response.text
             else:
-                self.logger.warning(f"Failed to fetch {url}, status code: {response.status_code}")
                 return ""
         except Exception as e:
-            self.logger.error(f"Error fetching {url}: {e}")
             return ""
 
     def clean_text(self, text: str) -> str:
@@ -304,7 +311,7 @@ def extract_pub_date_from_html(soup: BeautifulSoup) -> str:
     return None
 
 
-def scrape_article_text(url: str, timeout: int = 10) -> dict:
+def scrape_article_text(url: str, timeout: float = 2.5) -> dict:
     """
     Fetches the HTML of the given article URL and extracts the main body text and publication date.
     Cleans up boilerplate content like scripts, style sheets, and headers.
@@ -318,7 +325,7 @@ def scrape_article_text(url: str, timeout: int = 10) -> dict:
     }
     result = {"text": "", "publish_date": None}
     try:
-        response = requests.get(url, headers=headers, timeout=timeout)
+        response = _SESSION.get(url, headers=headers, timeout=timeout)
         if response.status_code == 200:
             response.encoding = response.apparent_encoding or "utf-8"
             soup = BeautifulSoup(response.text, "html.parser")
