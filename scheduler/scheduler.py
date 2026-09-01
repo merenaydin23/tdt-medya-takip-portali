@@ -54,12 +54,11 @@ _last_general_serp_run = None
 def _get_global_dedup_sets():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT link, title FROM news")
+    cursor.execute("SELECT link FROM news WHERE link IS NOT NULL AND link != ''")
     db_rows = cursor.fetchall()
     conn.close()
     existing_links = {row["link"] for row in db_rows if row["link"]}
-    existing_titles = {"".join(ch for ch in row["title"].lower() if ch.isalnum()) for row in db_rows if row["title"]}
-    return existing_links, existing_titles
+    return existing_links
 
 def get_pipeline_status() -> dict:
     return _pipeline_status
@@ -122,8 +121,8 @@ def run_media_monitoring_pipeline() -> dict:
 
         logger.info(f"Step 1 Complete: Fetched {len(raw_articles)} total articles (including SerpApi).")
 
-        # Step 2: Instant RAM deduplication
-        existing_links, existing_titles = _get_global_dedup_sets()
+        # Step 2: Instant RAM deduplication by unique URL link
+        existing_links = _get_global_dedup_sets()
 
         import email.utils
         def parse_publish_date(date_str: str) -> datetime:
@@ -192,15 +191,10 @@ def run_media_monitoring_pipeline() -> dict:
             if is_junk_title(title):
                 continue
 
-            clean_title_str = "".join(ch for ch in title.lower() if ch.isalnum())
-            
-            if link in existing_links or clean_title_str in existing_titles:
+            if not link or link in existing_links:
                 continue
                 
             existing_links.add(link)
-            if clean_title_str:
-                existing_titles.add(clean_title_str)
-
             items_to_process.append(item)
 
         # Smart parallel scraping of full article body texts ONLY when summary is missing
@@ -232,74 +226,7 @@ def run_media_monitoring_pipeline() -> dict:
             clean_today_items.append(it)
         items_to_process = clean_today_items
 
-        # Deduplicate within the same source by fuzzy content and title similarity (Jaccard index)
-        conn = get_connection()
-        cursor = conn.cursor()
-        cutoff_date_str = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
-        cursor.execute("SELECT source_name, summary, title FROM news WHERE publish_date >= ?", (cutoff_date_str,))
-        db_articles = cursor.fetchall()
-        conn.close()
-
-        # Pre-calculate word sets for DB articles grouped by source
-        db_word_sets = []
-        for row in db_articles:
-            db_t_set = _get_word_set(row["title"], min_len=4)
-            db_b_set = _get_word_set(row["summary"], min_len=5)
-            db_word_sets.append((row["source_name"], row["title"], db_t_set, db_b_set))
-
-        deduped_items = []
-        accepted_word_sets = []
-
-        for item in items_to_process:
-            item_src = item.get("source_name", "")
-            title_text = item.get("title") or ""
-            summary_text = item.get("summary") or ""
-            t_set = _get_word_set(title_text, min_len=4)
-            b_set = _get_word_set(summary_text, min_len=5)
-
-            is_dup = False
-            dup_reason = ""
-
-            # 1. Compare with DB articles for the SAME source
-            for db_src, db_title, db_t_set, db_b_set in db_word_sets:
-                if db_src != item_src:
-                    continue
-                # Quick skip if zero common words
-                if not (t_set & db_t_set or b_set & db_b_set):
-                    continue
-
-                t_sim = _jaccard_sim(t_set, db_t_set)
-                b_sim = _jaccard_sim(b_set, db_b_set) if (b_set and db_b_set) else 0.0
-                
-                if (t_sim > 0.60) or (b_sim > 0.65) or (t_sim > 0.35 and b_sim > 0.30):
-                    is_dup = True
-                    dup_reason = f"DB article from {db_src}: '{db_title}'"
-                    break
-
-            # 2. Compare with already accepted items in this run for the SAME source
-            if not is_dup:
-                for acc_src, acc_title, acc_t_set, acc_b_set in accepted_word_sets:
-                    if acc_src != item_src:
-                        continue
-                    if not (t_set & acc_t_set or b_set & acc_b_set):
-                        continue
-
-                    t_sim = _jaccard_sim(t_set, acc_t_set)
-                    b_sim = _jaccard_sim(b_set, acc_b_set) if (b_set and acc_b_set) else 0.0
-                    
-                    if (t_sim > 0.60) or (b_sim > 0.65) or (t_sim > 0.35 and b_sim > 0.30):
-                        is_dup = True
-                        dup_reason = f"Run article from {acc_src}: '{acc_title}'"
-                        break
-
-            if is_dup:
-                continue
-
-            accepted_word_sets.append((item_src, title_text, t_set, b_set))
-            deduped_items.append(item)
-
-        logger.info(f"Deduplication by content complete. Reduced {len(items_to_process)} articles to {len(deduped_items)}.")
-        items_to_process = deduped_items
+        logger.info(f"Link-based deduplication complete. Total unique articles to categorize: {len(items_to_process)}.")
 
 
         # Stage 1 keyword matching
