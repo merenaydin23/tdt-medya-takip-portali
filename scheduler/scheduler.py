@@ -47,18 +47,22 @@ _pipeline_status = {
     "last_count": 0,
     "last_error": None
 }
-_global_existing_links = None
-_global_existing_titles = None
-_last_general_serp_run = None
+def _clean_title_for_dedup(t: str) -> str:
+    if not t:
+        return ""
+    t = re.sub(r'^[0-2]?\d[:.][0-5]\d\s*[-–—:]?\s*', '', t)
+    t = re.sub(r'\s*[-–—|]\s*(?:Haberler|Sözcü|Halk TV|TRT Haber|Yeni Şafak|Cumhuriyet|A Haber|NTV|DHA|İHA|Bengü Türk|Bengütürk).*$', '', t, flags=re.I)
+    return "".join(ch for ch in t.lower() if ch.isalnum())
 
 def _get_global_dedup_sets():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT link FROM news WHERE link IS NOT NULL AND link != ''")
+    cursor.execute("SELECT source_name, title, link, SUBSTR(publish_date, 1, 10) as dt FROM news WHERE link IS NOT NULL AND link != ''")
     db_rows = cursor.fetchall()
     conn.close()
     existing_links = {row["link"] for row in db_rows if row["link"]}
-    return existing_links
+    existing_source_titles = {(row["source_name"], row["dt"], _clean_title_for_dedup(row["title"])) for row in db_rows if row["title"]}
+    return existing_links, existing_source_titles
 
 def get_pipeline_status() -> dict:
     return _pipeline_status
@@ -121,8 +125,8 @@ def run_media_monitoring_pipeline() -> dict:
 
         logger.info(f"Step 1 Complete: Fetched {len(raw_articles)} total articles (including SerpApi).")
 
-        # Step 2: Instant RAM deduplication by unique URL link
-        existing_links = _get_global_dedup_sets()
+        # Step 2: Instant RAM deduplication by unique URL link & source-level title uniqueness
+        existing_links, existing_source_titles = _get_global_dedup_sets()
 
         import email.utils
         def parse_publish_date(date_str: str) -> datetime:
@@ -193,8 +197,19 @@ def run_media_monitoring_pipeline() -> dict:
 
             if not link or link in existing_links:
                 continue
-                
+
+            s_name = item.get("source_name", "")
+            dt_day = pub_dt.strftime("%Y-%m-%d")
+            clean_t = _clean_title_for_dedup(title)
+
+            # Prevent same source from inserting the exact same article multiple times
+            if clean_t and (s_name, dt_day, clean_t) in existing_source_titles:
+                continue
+
             existing_links.add(link)
+            if clean_t:
+                existing_source_titles.add((s_name, dt_day, clean_t))
+
             items_to_process.append(item)
 
         # Smart parallel scraping of full article body texts ONLY when summary is missing
