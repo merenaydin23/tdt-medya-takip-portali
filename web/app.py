@@ -283,38 +283,19 @@ def create_app():
             if n.get("ilgili_mi") in (1, True, "1"):
                 az_gundemi_count += 1
                 cat = turkish_lower(n.get("ilgi_kategorisi") or "").strip()
-                title_lower = turkish_lower(n.get("title") or "")
-                summary_lower = turkish_lower(n.get("summary") or "")
-                is_tdt = (
-                    "türk devletleri" in cat or "bölgesel" in cat or "tdt" in cat or "türk dünyası" in cat or
-                    "türk devletleri" in title_lower or "türk dünyası" in title_lower or "tdt" in title_lower or
-                    "türk devletleri" in summary_lower or "türk dünyası" in summary_lower or "tdt" in summary_lower
-                )
-                
-                if is_tdt:
+
+                if "azerbaycan" in cat:
                     country_counts["azerbaycan"] += 1
+                if "kazakistan" in cat:
                     country_counts["kazakistan"] += 1
+                if "kırgızistan" in cat or "kirgizistan" in cat:
                     country_counts["kirgizistan"] += 1
+                if "özbekistan" in cat or "ozbekistan" in cat:
                     country_counts["ozbekistan"] += 1
+                if "türkmenistan" in cat or "turkmenistan" in cat:
                     country_counts["turkmenistan"] += 1
+                if "kktc" in cat:
                     country_counts["kktc"] += 1
-                else:
-                    # Virgülle ayrılmış tüm parçaları kontrol et
-                    # Örn: "Kazakistan, KKTC" -> her ülkede say
-                    cat_parts = [p.strip() for p in cat.split(",")]
-                    for part in cat_parts:
-                        if "kazakistan" in part:
-                            country_counts["kazakistan"] += 1
-                        if "k\u0131rg\u0131zistan" in part or "kirgizistan" in part:
-                            country_counts["kirgizistan"] += 1
-                        if "\u00f6zbekistan" in part or "ozbekistan" in part:
-                            country_counts["ozbekistan"] += 1
-                        if "t\u00fcrkmenistan" in part or "turkmenistan" in part:
-                            country_counts["turkmenistan"] += 1
-                        if "kktc" in part:
-                            country_counts["kktc"] += 1
-                        if "azerbaycan" in part:
-                            country_counts["azerbaycan"] += 1
 
         # Group news by source — order by article count (highest first)
         items_by_source = {}

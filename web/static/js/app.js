@@ -225,59 +225,13 @@ function applyFiltersAndPagination() {
 
                 const nViewTab = normalizeTr(activeViewTab);
                 const nAspect = normalizeTr(ilgiKategorisi);
-                const nTitle = normalizeTr(cardTitle);
 
-                // TDT geneli konular tüm sekmelerde görünsün
-                const isTDT = nAspect.includes('turk devletleri') || 
-                              nAspect.includes('bolgesel') || 
-                              nAspect.includes('tdt') || 
-                              nAspect.includes('turk dunyasi') ||
-                              nTitle.includes('turk devletleri') || 
-                              nTitle.includes('turk dunyasi') || 
-                              nTitle.includes('tdt');
-
-                if (isTDT) {
-                    // TDT gündemi: tüm ülke sekmelerinde göster
-                    matchesTab = true;
-                    if (nViewTab === 'azerbaycan' && activeAzSubcategory !== 'all') {
-                        const nSub = normalizeTr(activeAzSubcategory);
-                        if (!nAspect.includes(nSub)) {
-                            matchesTab = false;
-                        }
-                    }
-                } else {
-                    // Virgülle ayrılmış çoklu ülke kategorisini parçala
-                    // Örn: "Kazakistan, KKTC" -> ["kazakistan", "kktc"]
-                    const categoryParts = nAspect.split(',').map(p => p.trim()).filter(p => p.length > 0);
-
-                    if (nViewTab === 'azerbaycan') {
-                        // Azerbaycan sekmesi: İlgi kategorisi veya başlıkta MUTLAKA 'azerbaycan' (veya Ermenistan/Zengezur/Karabağ/Şuşa/Nahçıvan) geçmeli
-                        const hasAzerbaijan = categoryParts.some(p => p.includes('azerbaycan')) || 
-                                              nAspect.includes('azerbaycan') ||
-                                              nAspect.includes('ermenistan') ||
-                                              nAspect.includes('zengezur') ||
-                                              nAspect.includes('karabag') ||
-                                              nAspect.includes('susa') ||
-                                              nAspect.includes('nahcivan') ||
-                                              nTitle.includes('azerbaycan') ||
-                                              nTitle.includes('karabag') ||
-                                              nTitle.includes('zengezur') ||
-                                              nTitle.includes('nahcivan');
-
-                        if (!hasAzerbaijan) {
-                            matchesTab = false;
-                        } else if (activeAzSubcategory !== 'all') {
-                            const nSub = normalizeTr(activeAzSubcategory);
-                            if (!nAspect.includes(nSub)) {
-                                matchesTab = false;
-                            }
-                        }
-                    } else {
-                        // Diğer ülke sekmeleri: kategori parçaları içinde sekme adı geçmeli
-                        const tabMatchesAnyPart = categoryParts.some(p => p.includes(nViewTab)) || nAspect.includes(nViewTab);
-                        if (!tabMatchesAnyPart) {
-                            matchesTab = false;
-                        }
+                if (!nAspect.includes(nViewTab)) {
+                    matchesTab = false;
+                } else if (nViewTab === 'azerbaycan' && activeAzSubcategory !== 'all') {
+                    const nSub = normalizeTr(activeAzSubcategory);
+                    if (!nAspect.includes(nSub)) {
+                        matchesTab = false;
                     }
                 }
             }
