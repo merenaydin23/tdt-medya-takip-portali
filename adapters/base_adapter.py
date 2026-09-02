@@ -54,6 +54,14 @@ def is_junk_title(title: str) -> bool:
     if re.match(r'^(\d+\s+[A-Za-zÇĞİÖŞÜçğıöşü]+\s+\d{4}|\d+[\s.-]+\d+[\s.-]+\d+|\d{1,2}[:.]\d{2})+$', title_clean):
         return True
 
+    # Outdated / archived specific sports rounds or old re-indexed news
+    outdated_patterns = [
+        "son 16 turunda azerbaycan'la",
+        "son 16 turunda azerbaycanla",
+    ]
+    if any(op in title_lower for op in outdated_patterns):
+        return True
+
     return False
 
 class BaseAdapter:
