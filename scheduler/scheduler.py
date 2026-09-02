@@ -1,8 +1,11 @@
+import re
 import logging
 import threading
 import time
 from datetime import datetime, timedelta
 import schedule
+
+_last_general_serp_run = None
 
 from concurrent.futures import ThreadPoolExecutor
 from config import SCHEDULE_TIME, SOURCES_CONFIG, CATEGORIES, SERPAPI_KEY, ENABLE_AI_SUMMARY, ENABLE_LLM_STAGE2
