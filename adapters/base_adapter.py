@@ -55,11 +55,18 @@ def is_junk_title(title: str) -> bool:
         return True
 
     # Outdated / archived specific sports rounds or old re-indexed news
+    title_norm = (title_clean.lower()
+                  .replace("’", "'").replace("‘", "'").replace("`", "'").replace("´", "'")
+                  .replace("“", '"').replace("”", '"')
+                  .replace("ı", "i").replace("ğ", "g").replace("ü", "u").replace("ş", "s").replace("ö", "o").replace("ç", "c"))
+    
     outdated_patterns = [
-        "son 16 turunda azerbaycan'la",
-        "son 16 turunda azerbaycanla",
+        "son 16 turunda azerbaycan",
+        "kadin voleybol takimi, son 16 turunda",
+        "cumhurbaskani erdogan, aliyev ile gorustu",
+        "cumhurbaskani erdogan aliyev ile gorustu",
     ]
-    if any(op in title_lower for op in outdated_patterns):
+    if any(op in title_norm for op in outdated_patterns):
         return True
 
     return False
